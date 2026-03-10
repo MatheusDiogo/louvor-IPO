@@ -1,0 +1,94 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <title>Louvor IPO</title>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-card">
+
+            <div class="login-header">
+
+                <h2 class="logo">
+                    Louvor IPO
+                </h2>
+
+            </div>
+
+            <form method="post">
+
+                {% csrf_token %}
+
+                <div class="input-group-modern">
+
+                    <span class="icon">
+                        👤
+                    </span>
+
+                    <input
+                        type="text"
+                        name="username"
+                        placeholder="Usuário"
+                        required
+                    >
+
+                </div>
+
+                <div class="input-group-modern">
+
+                    <span class="icon">
+                        🔒
+                    </span>
+
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        placeholder="Senha"
+                        required
+                    >
+
+                    <span class="toggle-password" onclick="togglePassword()">
+                        👁
+                    </span>
+
+                </div>
+
+                {% if erro %}
+                    <div class="login-error">
+
+                        <span class="error-icon">
+                            ⚠
+                        </span>
+
+                        <span class="error-text">
+                            Usuário ou senha incorretos
+                        </span>
+
+                    </div>
+                {% endif %}
+
+                <button class="btn-login">
+                    Entrar
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script src="{% static 'js/script.js' %}"></script>
+
+</body>
+</html>

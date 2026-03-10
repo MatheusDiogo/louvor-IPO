@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">
+    Bem vindo, {{ user.get_full_name|default:user.username }}
+</h2>
+
+<div class="row">
+
+    <div class="col-md-4">
+
+        <div class="card shadow card-verde">
+
+            <div class="card-body">
+
+                <h5>Músicos</h5>
+
+                <p>
+                    Gerenciar músicos do ministério.
+                </p>
+
+                <a href="/admin/usuarios/usuario/add/" class="btn btn-verde">
+                    Cadastrar músico
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
