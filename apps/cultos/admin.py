@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import Culto, TipoCulto
 
-# Register your models here.
+admin.site.register(Culto)
+admin.site.register(TipoCulto)
