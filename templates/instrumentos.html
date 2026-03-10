@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px; margin-bottom: 0;">
+                Instrumentos
+            </h2>
+            <p class="text-secondary opacity-75 small">Listagem oficial de equipamentos.</p>
+        </div>
+
+        <button class="btn-login" onclick="novoInstrumento()" style="width: auto; padding: 10px 24px;">
+            <i class="bi bi-plus-lg me-2"></i>Novo Instrumento
+        </button>
+    </div>
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-secondary small text-uppercase fw-bold w-75">Nome</th>
+                        <th class="text-secondary small text-uppercase fw-bold w-25 text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for instrumento in instrumentos %}
+                    <tr>
+                        <td class="fw-medium text-dark">
+                            <i class="bi bi-music-note-beamed me-2 text-success"></i>
+                            {{ instrumento.nome }}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button 
+                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3" 
+                                    onclick="editarInstrumento('{{ instrumento.id }}','{{ instrumento.nome }}')">
+                                    <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
+                                </button>
+                                
+                                <a href="/instrumentos/excluir/{{ instrumento.id }}/" 
+                                   class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
+                                   onclick="return confirm('Excluir este instrumento?')">
+                                    <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Excluir</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center py-5 text-muted">
+                            Nenhum instrumento encontrado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalInstrumento" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <form method="post" action="/instrumentos/salvar/">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="instrumento_id">
+
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold" style="color: var(--primary-green);">
+                        <i class="bi bi-plus-circle me-2"></i>Instrumento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Nome do Instrumento</label>
+                        <div class="input-group-modern">
+                            <i class="bi bi-tag text-muted"></i>
+                            <input 
+                                type="text" 
+                                name="nome" 
+                                id="instrumento_nome" 
+                                placeholder="Ex: Violão, Teclado..."
+                                required
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

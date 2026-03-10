@@ -1,35 +1,71 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<h2 class="mb-4">
-    Bem vindo, {{ user.get_full_name|default:user.username }}
-</h2>
-
-<div class="row">
-
-    <div class="col-md-4">
-
-        <div class="card shadow card-verde">
-
-            <div class="card-body">
-
-                <h5>Músicos</h5>
-
-                <p>
-                    Gerenciar músicos do ministério.
-                </p>
-
-                <a href="/admin/usuarios/usuario/add/" class="btn btn-verde">
-                    Cadastrar músico
-                </a>
-
-            </div>
-
-        </div>
-
+<div class="py-4">
+    <div class="mb-5 text-center text-md-start">
+        <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px;">
+            Bem-vindo, {{ user.get_full_name|default:user.username }}
+        </h2>
+        <p class="text-secondary opacity-75">
+            Gerenciamento de Escalas e Músicas.
+        </p>
     </div>
 
-</div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">🎤</div>
+                    <h5 class="card-title fw-bold">Músicos</h5>
+                    <p class="card-text text-muted small flex-grow-1">Gerenciamento de integrantes e permissões.</p>
+                    <a href="/admin/usuarios/usuario/" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
 
+        <div class="col-md-4">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">🎸</div>
+                    <h5 class="card-title fw-bold">Instrumentos</h5>
+                    <p class="card-text text-muted small flex-grow-1">Controle os instrumentos disponíveis.</p>
+                    <a href="/instrumentos/" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">🎵</div>
+                    <h5 class="card-title fw-bold">Músicas</h5>
+                    <p class="card-text text-muted small flex-grow-1">Acessar repertório e cifras.</p>
+                    <a href="/admin/musicas/musica/" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">📅</div>
+                    <h5 class="card-title fw-bold">Cultos</h5>
+                    <p class="card-text text-muted small flex-grow-1">Configure cultos fixos e especiais.</p>
+                    <a href="/admin/cultos/culto/" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">📋</div>
+                    <h5 class="card-title fw-bold">Escalas</h5>
+                    <p class="card-text text-muted small flex-grow-1">Organize os músicos para cada culto.</p>
+                    <a href="/admin/escalas/escala/" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

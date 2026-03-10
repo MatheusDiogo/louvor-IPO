@@ -30,3 +30,20 @@ document.addEventListener("DOMContentLoaded", function(){
     }, 3000);
 
 });
+
+function novoInstrumento(){
+
+    document.getElementById("instrumento_id").value = "";
+    document.getElementById("instrumento_nome").value = "";
+
+    new bootstrap.Modal(document.getElementById("modalInstrumento")).show();
+}
+
+
+function editarInstrumento(id,nome){
+
+    document.getElementById("instrumento_id").value = id;
+    document.getElementById("instrumento_nome").value = nome;
+
+    new bootstrap.Modal(document.getElementById("modalInstrumento")).show();
+}
