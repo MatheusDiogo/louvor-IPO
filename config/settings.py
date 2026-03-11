@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '/app/data/media' if os.getenv('RAILWAY_ENVIRONMENT') else BASE_DIR / 'media'
 
 
 if os.getenv('RAILWAY_ENVIRONMENT'):
