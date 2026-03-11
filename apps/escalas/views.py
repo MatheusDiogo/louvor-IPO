@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 def requer_lider(view_func):
     """Decorator que bloqueia acesso se não for líder."""
     def wrapper(request, *args, **kwargs):
-        if not request.user.perfil.is_lider:
+        if not request.user.is_lider:
             raise PermissionDenied
         return view_func(request, *args, **kwargs)
     return wrapper
