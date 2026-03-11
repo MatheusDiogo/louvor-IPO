@@ -34,7 +34,8 @@ def salvar_integrante(request):
                 username=username,
                 email=email,
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                password='louvoripo'
             )
         
         usuario.save()
