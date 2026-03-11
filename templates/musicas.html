@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px; margin-bottom: 0;">
+                Repertório de Músicas
+            </h2>
+            <p class="text-secondary opacity-75 small">Gerencie as letras, cifras e links do YouTube.</p>
+        </div>
+
+        <button class="btn-login" onclick="novaMusica()" style="width: auto; padding: 10px 24px;">
+            <i class="bi bi-plus-lg me-2"></i>Nova Música
+        </button>
+    </div>
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-secondary small text-uppercase fw-bold w-50">Título</th>
+                        <th class="text-secondary small text-uppercase fw-bold w-25">Tons/Cifras</th>
+                        <th class="text-secondary small text-uppercase fw-bold w-25 text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for musica in musicas %}
+                    <tr>
+                        <td class="fw-medium text-dark">
+                            <div class="d-flex align-items-center">
+                                <div class="card-icon mb-0 me-3" style="width: 35px; height: 35px; font-size: 1rem; border-radius: 8px;">
+                                    🎵
+                                </div>
+                                <div>
+                                    <span class="d-block">{{ musica.nome }}</span>
+                                    {% if musica.link_youtube %}
+                                    <a href="{{ musica.link_youtube }}" target="_blank" class="text-danger small text-decoration-none">
+                                        <i class="bi bi-youtube"></i> Ver no YouTube
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="/musicas/{{ musica.id }}/" class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">
+                                <i class="bi bi-music-note"></i> <span class="d-none d-md-inline">{{ musica.tons.count }} ton(s)</span>
+                            </a>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button 
+                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3" 
+                                    onclick="editarMusica('{{ musica.id }}','{{ musica.nome }}','{{ musica.link_youtube }}')">
+                                    <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
+                                </button>
+                                
+                                <a href="/musicas/excluir/{{ musica.id }}/" 
+                                   class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
+                                   onclick="return confirm('Excluir esta música e todas as suas cifras?')">
+                                    <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Excluir</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="bi bi-search d-block fs-2 mb-2 opacity-50"></i>
+                            Nenhuma música encontrada no repertório.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMusica" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <form method="post" action="/musicas/salvar/">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="musica_id">
+
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold" style="color: var(--primary-green);">
+                        <i class="bi bi-music-note-list me-2"></i>Dados da Música
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Nome da Música</label>
+                        <div class="input-group-modern">
+                            <i class="bi bi-fonts text-muted"></i>
+                            <input type="text" name="nome" id="musica_nome" placeholder="Ex: Grandioso és Tu" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Link do YouTube</label>
+                        <div class="input-group-modern">
+                            <i class="bi bi-youtube text-muted"></i>
+                            <input type="url" name="link_youtube" id="musica_youtube" placeholder="https://youtube.com/...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar Música</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

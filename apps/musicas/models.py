@@ -27,7 +27,7 @@ class Tom(models.Model):
         max_length=10
     )
 
-    cifra_base64 = models.TextField()
+    pdf = models.FileField(upload_to='pdf_cifras/')
 
     def __str__(self):
         return f"{self.musica.nome} - {self.tom}"
