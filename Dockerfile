@@ -22,12 +22,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Cria as pastas necessárias e dá permissão (importante para o Volume)
-RUN mkdir -p /app/data /app/static /app/media
-RUN chmod -R 777 /app/data /app/static /app/media
+RUN mkdir -p /app/data /app/staticfiles /app/static /app/media
+RUN chmod -R 777 /app/data /app/staticfiles /app/static /app/media
 
 # Comando para coletar estáticos, migrar e iniciar o servidor
 # Usamos um script ou o comando direto. O comando abaixo é otimizado para produção.
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && \
+CMD ["sh", "-c", "python manage.py createsuperuser --noinput || true && \
+    python manage.py collectstatic --noinput && \
     python manage.py migrate && \
-    python manage.py createsuperuser --noinput || true && \
     gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --log-level debug"]
