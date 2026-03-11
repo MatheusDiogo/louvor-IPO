@@ -10,7 +10,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('instrumentos', '0001_initial'),
-        ('cultos', '0001_initial'),
     ]
 
     operations = [

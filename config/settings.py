@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'apps.usuarios',
     'apps.instrumentos',
     'apps.musicas',
-    'apps.cultos',
     'apps.escalas',
 ]
 
