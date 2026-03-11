@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'escala_list' %}" class="text-success text-decoration-none">Escalas</a>
+            </li>
+            <li class="breadcrumb-item active">{{ escala.data|date:"d/m/Y" }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--primary-green); letter-spacing: -1px;">
+                Escala — {{ escala.data|date:"d \d\e F \d\e Y" }}
+            </h2>
+            {% if escala.observacao %}
+            <p class="text-secondary small mb-0">
+                <i class="bi bi-chat-left-text me-1"></i>{{ escala.observacao }}
+            </p>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'escala_visualizar' escala.pk %}"
+               class="btn btn-outline-secondary rounded-pill px-4"
+               style="border-color:#dee2e6;">
+                <i class="bi bi-eye me-2"></i>Visualizar
+            </a>
+            <button class="btn-login" style="width: auto; padding: 10px 24px;"
+                    data-bs-toggle="modal" data-bs-target="#modalAdicionarMusica">
+                <i class="bi bi-plus-lg me-2"></i>Adicionar Música
+            </button>
+        </div>
+    </div>
+
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 small" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <!-- Lista de músicas da escala -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-secondary small text-uppercase fw-bold">#</th>
+                        <th class="text-secondary small text-uppercase fw-bold w-50">Música</th>
+                        <th class="text-secondary small text-uppercase fw-bold">Tom</th>
+                        <th class="text-secondary small text-uppercase fw-bold">Cifra PDF</th>
+                        <th class="text-secondary small text-uppercase fw-bold text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in itens %}
+                    <tr>
+                        <td class="text-muted align-middle">{{ forloop.counter }}</td>
+                        <td class="align-middle fw-medium">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="card-icon mb-0" style="width:32px;height:32px;font-size:0.9rem;border-radius:8px;">🎵</div>
+                                <div>
+                                    <span class="d-block">{{ item.musica.nome }}</span>
+                                    {% if item.musica.link_youtube %}
+                                    <a href="{{ item.musica.link_youtube }}" target="_blank"
+                                       class="text-danger small text-decoration-none">
+                                        <i class="bi bi-youtube"></i> YouTube
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">
+                                <i class="bi bi-music-note"></i> {{ item.tom.tom }}
+                            </span>
+                        </td>
+                        <td class="align-middle">
+                            <a href="{{ item.tom.pdf.url }}" target="_blank"
+                               class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                            </a>
+                        </td>
+                        <td class="text-end align-middle">
+                            <a href="{% url 'escala_musica_excluir' item.pk %}"
+                               class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
+                               onclick="return confirm('Remover &quot;{{ item.musica.nome }}&quot; desta escala?')">
+                                <i class="bi bi-trash"></i>
+                                <span class="d-none d-md-inline"> Remover</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-music-note-list d-block fs-2 mb-2 opacity-50"></i>
+                            Nenhuma música adicionada ainda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Música à Escala -->
+<div class="modal fade" id="modalAdicionarMusica" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <form method="post" action="{% url 'escala_musica_adicionar' escala.pk %}">
+                {% csrf_token %}
+
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold" style="color: var(--primary-green);">
+                        <i class="bi bi-music-note-list me-2"></i>Adicionar Música
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    {% if musicas_disponiveis %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Música</label>
+                        <select name="musica_id" id="selectMusica" class="form-select" style="border-radius: 15px;" required>
+                            <option value="">Selecione uma música...</option>
+                            {% for musica in musicas_disponiveis %}
+                            <option value="{{ musica.id }}">{{ musica.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="divTom" style="display:none;">
+                        <label class="form-label small fw-bold text-secondary">Tom / Cifra</label>
+                        <select name="tom_id" id="selectTom" class="form-select" style="border-radius: 15px;" required>
+                            <option value="">Selecione o tom...</option>
+                        </select>
+                        <small class="text-muted">Apenas tons com PDF disponível são listados.</small>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-emoji-smile d-block fs-2 mb-2 opacity-50"></i>
+                        <p class="small">Todas as músicas com tom cadastrado já foram adicionadas a esta escala!</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    {% if musicas_disponiveis %}
+                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Adicionar</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const urlTons = "{% url 'api_tons_musica' 0 %}".replace('/0/', '/');
+
+document.getElementById('selectMusica').addEventListener('change', function () {
+    const musicaId = this.value;
+    const divTom = document.getElementById('divTom');
+    const selectTom = document.getElementById('selectTom');
+
+    selectTom.innerHTML = '<option value="">Carregando...</option>';
+
+    if (!musicaId) {
+        divTom.style.display = 'none';
+        return;
+    }
+
+    fetch(`${urlTons}${musicaId}/`)
+        .then(r => r.json())
+        .then(data => {
+            selectTom.innerHTML = '<option value="">Selecione o tom...</option>';
+            data.tons.forEach(t => {
+                selectTom.innerHTML += `<option value="${t.id}">${t.tom}</option>`;
+            });
+            divTom.style.display = 'block';
+        })
+        .catch(() => {
+            selectTom.innerHTML = '<option value="">Erro ao carregar tons</option>';
+            divTom.style.display = 'block';
+        });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px; margin-bottom: 0;">
+                Escalas
+            </h2>
+            <p class="text-secondary opacity-75 small">Escalas futuras do ministério de louvor.</p>
+        </div>
+        <button class="btn-login" style="width: auto; padding: 10px 24px;"
+                data-bs-toggle="modal" data-bs-target="#modalEscala" onclick="limparFormEscala()">
+            <i class="bi bi-plus-lg me-2"></i>Nova Escala
+        </button>
+    </div>
+
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 small" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-secondary small text-uppercase fw-bold">Data</th>
+                        <th class="text-secondary small text-uppercase fw-bold">Observação</th>
+                        <th class="text-secondary small text-uppercase fw-bold text-center">Músicas</th>
+                        <th class="text-secondary small text-uppercase fw-bold text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for escala in escalas %}
+                    <tr>
+                        <td class="fw-medium">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="card-icon mb-0" style="width:35px;height:35px;font-size:1rem;border-radius:8px;">📋</div>
+                                <div>
+                                    <span class="d-block fw-bold">{{ escala.data|date:"d/m/Y" }}</span>
+                                    <span class="text-muted small">{{ escala.data|date:"l" }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted small align-middle">
+                            {{ escala.observacao|default:"—"|truncatechars:50 }}
+                        </td>
+                        <td class="text-center align-middle">
+                            <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">
+                                <i class="bi bi-music-note"></i> {{ escala.itens.count }} música(s)
+                            </span>
+                        </td>
+                        <td class="text-end align-middle">
+                            <div class="d-flex justify-content-end gap-2">
+                                <!-- Visualizar (somente leitura) -->
+                                <a href="{% url 'escala_visualizar' escala.pk %}"
+                                   class="btn btn-sm btn-outline-secondary border-0 rounded-pill px-3"
+                                   title="Visualizar escala">
+                                    <i class="bi bi-eye"></i>
+                                    <span class="d-none d-md-inline"> Ver</span>
+                                </a>
+                                <!-- Gerenciar músicas -->
+                                <a href="{% url 'escala_detalhe' escala.pk %}"
+                                   class="btn btn-sm btn-outline-success border-0 rounded-pill px-3"
+                                   title="Gerenciar músicas">
+                                    <i class="bi bi-pencil"></i>
+                                    <span class="d-none d-md-inline"> Editar</span>
+                                </a>
+                                <!-- Excluir -->
+                                <a href="{% url 'escala_excluir' escala.pk %}"
+                                   class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
+                                   onclick="return confirm('Excluir a escala de {{ escala.data|date:"d/m/Y" }} e todas as suas músicas?')"
+                                   title="Excluir escala">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
+                            Nenhuma escala futura cadastrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nova / Editar Escala -->
+<div class="modal fade" id="modalEscala" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <form method="post" id="formEscala">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="escala_id">
+
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold" style="color: var(--primary-green);" id="modalEscalaTitulo">
+                        <i class="bi bi-calendar-plus me-2"></i>Nova Escala
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Data do Culto</label>
+                        <div class="input-group-modern">
+                            <i class="bi bi-calendar text-muted"></i>
+                            <input type="date" name="data" id="escala_data" required
+                                   min="{{ hoje|date:'Y-m-d' }}">
+                        </div>
+                        <small class="text-muted">Apenas datas de hoje em diante.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Observação <span class="fw-normal">(opcional)</span></label>
+                        <textarea name="observacao" id="escala_obs" rows="3"
+                                  class="form-control"
+                                  style="border-radius: 15px; border-color: #e0e0e0;"
+                                  placeholder="Ex: Aniversário Igreja, Ensaio Sexta 19h..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function limparFormEscala() {
+        document.getElementById('escala_id').value = '';
+        document.getElementById('escala_data').value = '';
+        document.getElementById('escala_obs').value = '';
+        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Nova Escala';
+        document.getElementById('formEscala').action = "{% url 'escala_criar' %}";
+    }
+
+    function editarEscala(id, data, obs) {
+        document.getElementById('escala_id').value = id;
+        document.getElementById('escala_data').value = data;
+        document.getElementById('escala_obs').value = obs;
+        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Escala';
+        document.getElementById('formEscala').action = `/escalas/${id}/editar/`;
+        new bootstrap.Modal(document.getElementById('modalEscala')).show();
+    }
+</script>
+{% endblock %}
