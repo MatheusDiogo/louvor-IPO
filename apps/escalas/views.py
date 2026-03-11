@@ -5,7 +5,15 @@ from django.contrib import messages
 from .models import Escala, EscalaMusica
 from apps.musicas.models import Musica, Tom
 from datetime import datetime
+from django.core.exceptions import PermissionDenied
 
+def requer_lider(view_func):
+    """Decorator que bloqueia acesso se não for líder."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.perfil.is_lider:
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 @login_required
 def escala_list(request):
@@ -16,6 +24,7 @@ def escala_list(request):
 
 
 @login_required
+@requer_lider
 def escala_criar(request):
     if request.method == 'POST':
         data_str = request.POST.get('data')
@@ -41,6 +50,7 @@ def escala_criar(request):
 
 
 @login_required
+@requer_lider
 def escala_editar(request, pk):
     """Edita observação e data de uma escala (só permite datas futuras)."""
     escala = get_object_or_404(Escala, pk=pk)
@@ -72,6 +82,7 @@ def escala_editar(request, pk):
 
 
 @login_required
+@requer_lider
 def escala_excluir(request, pk):
     """Exclui uma escala."""
     escala = get_object_or_404(Escala, pk=pk)

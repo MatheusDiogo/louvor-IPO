@@ -9,10 +9,12 @@
             </h2>
             <p class="text-secondary opacity-75 small">Escalas futuras do ministério de louvor.</p>
         </div>
-        <button class="btn-login" style="width: auto; padding: 10px 24px;"
-                data-bs-toggle="modal" data-bs-target="#modalEscala" onclick="limparFormEscala()">
-            <i class="bi bi-plus-lg me-2"></i>Nova Escala
-        </button>
+        {% if user.is_lider %}
+            <button class="btn-login" style="width: auto; padding: 10px 24px;"
+                    data-bs-toggle="modal" data-bs-target="#modalEscala" onclick="limparFormEscala()">
+                <i class="bi bi-plus-lg me-2"></i>Nova Escala
+            </button>
+        {% endif %}
     </div>
 
     {% for message in messages %}
@@ -62,20 +64,22 @@
                                     <i class="bi bi-eye"></i>
                                     <span class="d-none d-md-inline"> Ver</span>
                                 </a>
-                                <!-- Gerenciar músicas -->
-                                <a href="{% url 'escala_detalhe' escala.pk %}"
-                                   class="btn btn-sm btn-outline-success border-0 rounded-pill px-3"
-                                   title="Gerenciar músicas">
-                                    <i class="bi bi-pencil"></i>
-                                    <span class="d-none d-md-inline"> Editar</span>
-                                </a>
-                                <!-- Excluir -->
-                                <a href="{% url 'escala_excluir' escala.pk %}"
-                                   class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
-                                   onclick="return confirm('Excluir a escala de {{ escala.data|date:"d/m/Y" }} e todas as suas músicas?')"
-                                   title="Excluir escala">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                                {% if user.is_lider %}
+                                    <!-- Gerenciar músicas -->
+                                    <a href="{% url 'escala_detalhe' escala.pk %}"
+                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3"
+                                    title="Gerenciar músicas">
+                                        <i class="bi bi-pencil"></i>
+                                        <span class="d-none d-md-inline"> Editar</span>
+                                    </a>
+                                    <!-- Excluir -->
+                                    <a href="{% url 'escala_excluir' escala.pk %}"
+                                    class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
+                                    onclick="return confirm('Excluir a escala de {{ escala.data|date:"d/m/Y" }} e todas as suas músicas?')"
+                                    title="Excluir escala">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
