@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px;">Integrantes</h2>
+            <p class="text-secondary small">Gerencie os músicos e líderes do ministério.</p>
+        </div>
+        <button class="btn-login" style="width: auto; padding: 10px 24px;" 
+                data-bs-toggle="modal" data-bs-target="#modalIntegrante" onclick="limparFormulario()">
+            <i class="bi bi-person-plus me-2"></i>Novo Integrante
+        </button>
+    </div>
+
+    <div class="row g-4">
+        {% for integrante in integrantes %}
+        <div class="col-md-4">
+            <div class="table-card p-4 h-100">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-person fs-4 text-success"></i>
+                    </div>
+                    {% if integrante.is_lider %}
+                        <span class="badge rounded-pill bg-warning text-dark" style="height: fit-content;">Líder</span>
+                    {% endif %}
+                    <a href="/integrantes/excluir/{{ integrante.id }}/" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Excluir este integrante?')">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+                
+                <h5 class="fw-bold mb-1">{{ integrante.get_full_name }}</h5>
+
+                <p class="text-muted small mb-3">{{ integrante.email }}</p>
+                
+                <div class="mb-3">
+                    {% for inst in integrante.instrumentos.all %}
+                        <span class="badge border text-secondary fw-normal">{{ inst.nome }}</span>
+                    {% empty %}
+                        <span class="text-muted small">Nenhum instrumento</span>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary w-100 rounded-pill" 
+                            onclick="editarIntegrante('{{ integrante.id }}', '{{ integrante.first_name }}', '{{ integrante.last_name }}', '{{ integrante.email }}', '{{ integrante.is_lider }}', '{{ integrante.instrumentos.all|join:',' }}')">
+                        Editar
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="modalIntegrante" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
+            <form method="post" action="{% url 'salvar_integrante' %}">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="inst_id">
+                
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold" style="color: var(--primary-green);">Dados do Integrante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Username</label>
+                        <input type="text" name="username" id="inst_username" class="form-control rounded-pill" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-secondary">Nome</label>
+                            <input type="text" name="first_name" id="inst_nome" class="form-control rounded-pill" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-secondary">Sobrenome</label>
+                            <input type="text" name="last_name" id="inst_sobrenome" class="form-control rounded-pill" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">E-mail</label>
+                        <input type="email" name="email" id="inst_email" class="form-control rounded-pill" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Instrumentos</label>
+                        <select name="instrumentos" id="inst_instrumentos" class="form-select" multiple style="border-radius: 15px;">
+                            {% for inst in instrumentos %}
+                                <option value="{{ inst.id }}">{{ inst.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Segure Ctrl (ou Command) para selecionar vários.</small>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

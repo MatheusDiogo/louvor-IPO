@@ -75,3 +75,41 @@ function editarMusica(id, nome, youtube) {
     
     modalMusica.show();
 }
+
+function editarIntegrante(id, nome, sobrenome, email, isLider, instrumentos) {
+    // 1. Abre o modal manualmente (caso o data-bs-toggle falhe)
+    const modal = new bootstrap.Modal(document.getElementById('modalIntegrante'));
+    
+    // 2. Preenche os campos de texto
+    document.getElementById('inst_id').value = id;
+    document.getElementById('inst_nome').value = nome;
+    document.getElementById('inst_sobrenome').value = sobrenome;
+    document.getElementById('inst_email').value = email;
+    // O username geralmente é o email no seu caso
+    if(document.getElementById('inst_username')) {
+        document.getElementById('inst_username').value = email;
+    }
+
+    // 3. Preenche o select múltiplo de instrumentos
+    const selectInstrumentos = document.getElementById('inst_instrumentos');
+    const listaInstrumentos = instrumentos.split(','); // Transforma a string em array
+
+    // Reseta seleções anteriores
+    Array.from(selectInstrumentos.options).forEach(option => {
+        option.selected = false;
+    });
+
+    // Marca como selecionado os instrumentos que o integrante já possui
+    Array.from(selectInstrumentos.options).forEach(option => {
+        if (listaInstrumentos.includes(option.text)) {
+            option.selected = true;
+        }
+    });
+
+    modal.show();
+}
+
+function limparFormulario() {
+    document.getElementById('inst_id').value = '';
+    document.querySelector('#modalIntegrante form').reset();
+}

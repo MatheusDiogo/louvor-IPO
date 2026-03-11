@@ -24,4 +24,5 @@ urlpatterns = [
     path("", include("apps.core.urls")),
     path("instrumentos/", include("apps.instrumentos.urls")),
     path("musicas/", include("apps.musicas.urls")),
+    path("integrantes/", include("apps.usuarios.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
