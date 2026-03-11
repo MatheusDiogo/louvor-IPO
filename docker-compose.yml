@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    container_name: louvor_ipo
+    # Mapeia a porta 8000 do seu PC para a 8000 do container
+    ports:
+      - "8000:8000"
+    # Variáveis de ambiente para desenvolvimento local
+    env_file:
+      - .env
+    environment:
+      - PORT=8000
+      - DEBUG=True
+    # Volumes: Sincroniza o código e persiste o banco de dados
+    volumes:
+      - .:/app
+      - local_data:/app/data
+      - media_data:/app/media
+    # Comando para rodar em modo desenvolvimento (com auto-reload)
+    command: >
+      sh -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py createsuperuser --noinput || true && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --log-level debug"
+
+volumes:
+  local_data:
+  media_data:
