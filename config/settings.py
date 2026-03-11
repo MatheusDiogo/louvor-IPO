@@ -152,6 +152,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
-CSRF_TRUSTED_ORIGINS = ['https://cantina-acamp-ipo.up.railway.app']
+CSRF_TRUSTED_ORIGINS = ['https://louvor-ipo.up.railway.app']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
