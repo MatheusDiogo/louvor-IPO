@@ -30,7 +30,7 @@ def salvar_integrante(request):
             usuario.username = username
         else:
             # Para novos usuários, definimos o username como o email
-            usuario = Usuario.objects.create(
+            usuario = Usuario.objects.create_user(
                 username=username,
                 email=email,
                 first_name=first_name,
