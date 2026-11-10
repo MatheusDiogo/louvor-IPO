@@ -36,7 +36,27 @@ def login_view(request):
 
 @login_required
 def home(request):
-    return render(request, "home.html")
+    from django.utils import timezone
+    from apps.escalas.models import EscalaIntegrante
+
+    hoje = timezone.localdate()
+
+    # Próximo culto em que o usuário está escalado
+    proximas = list(
+        EscalaIntegrante.objects
+        .filter(usuario=request.user, escala__data__gte=hoje)
+        .select_related('escala', 'instrumento')
+        .order_by('escala__data', 'instrumento__ordem')
+    )
+    proximo_culto = None
+    if proximas:
+        escala = proximas[0].escala
+        proximo_culto = {
+            'escala': escala,
+            'funcoes': [ei.instrumento.nome for ei in proximas if ei.escala_id == escala.id],
+            'ministra': escala.ministrante_id == request.user.id,
+        }
+    return render(request, "home.html", {"proximo_culto": proximo_culto, "hoje": hoje})
 
 
 def logout_view(request):

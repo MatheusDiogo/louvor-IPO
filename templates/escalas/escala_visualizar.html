@@ -29,6 +29,30 @@
         {% endif %}
     </div>
 
+    {% if minhas_funcoes %}
+    <div class="alert alert-success rounded-3 d-flex align-items-center gap-2 py-2">
+        <i class="bi bi-person-check-fill fs-5"></i>
+        <span>Você está escalado neste culto: <strong>{{ minhas_funcoes|join:", " }}</strong>{% if escala.ministrante_id == user.id %} · <i class="bi bi-star-fill text-warning"></i> <strong>Ministrante</strong>{% endif %}</span>
+    </div>
+    {% endif %}
+
+    {% if equipe %}
+    <div class="table-card p-3 p-md-4 mb-4">
+        <h6 class="fw-bold mb-3" style="color: var(--primary-green);"><i class="bi bi-people me-2"></i>Equipe</h6>
+        <div class="row g-2">
+            {% for instrumento, usuarios in equipe %}
+            <div class="col-sm-6 col-lg-4 d-flex gap-2 small">
+                <span class="text-secondary fw-semibold flex-shrink-0" style="width: 100px;">{{ instrumento.nome }}</span>
+                <span>
+                    {% for u in usuarios %}<span class="{% if u == user %}fw-bold text-success{% endif %}">{{ u.first_name|default:u.username }}{% if u.id == escala.ministrante_id %} <i class="bi bi-star-fill text-warning" title="Ministrante"></i>{% endif %}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <h6 class="fw-bold mb-3" style="color: var(--primary-green);"><i class="bi bi-music-note-list me-2"></i>Músicas</h6>
     <div class="row g-3 g-md-4">
         {% for item in itens %}
         <div class="col-sm-6 col-lg-4">
@@ -61,7 +85,7 @@
         <div class="col-12">
             <div class="table-card text-center py-5 text-muted">
                 <i class="bi bi-music-note-list d-block fs-2 mb-2 opacity-50"></i>
-                <p class="mb-0">Nenhuma música nesta escala ainda.</p>
+                <p class="mb-0">Nenhuma música neste culto ainda.</p>
             </div>
         </div>
         {% endfor %}

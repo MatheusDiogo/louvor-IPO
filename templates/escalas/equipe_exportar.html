@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Exportar Escala | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'escala_equipe' %}?mes={{ inicio|date:'Y-m' }}" class="text-success text-decoration-none">Escalas</a></li>
+            <li class="breadcrumb-item active">Exportar</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Exportar escala</h2>
+            <p class="page-subtitle">Gere uma imagem para enviar no grupo.</p>
+        </div>
+    </div>
+
+    <form method="get" class="table-card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-4">
+                <label class="form-label small fw-bold text-secondary" for="inicio">Data início</label>
+                <input type="date" name="inicio" id="inicio" value="{{ inicio|date:'Y-m-d' }}" class="form-control" style="border-radius: 12px;" required>
+            </div>
+            <div class="col-6 col-md-4">
+                <label class="form-label small fw-bold text-secondary" for="fim">Data fim</label>
+                <input type="date" name="fim" id="fim" value="{{ fim|date:'Y-m-d' }}" class="form-control" style="border-radius: 12px;" required>
+            </div>
+            <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-outline-success rounded-pill w-100 py-2"><i class="bi bi-arrow-repeat me-2"></i>Atualizar</button>
+            </div>
+        </div>
+    </form>
+
+    {% if meses %}
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn-login btn-acao flex-grow-1 flex-md-grow-0" id="btnBaixar">
+            <i class="bi bi-download me-2"></i>Baixar imagem
+        </button>
+        <button type="button" class="btn btn-outline-success rounded-pill px-4 flex-grow-1 flex-md-grow-0" id="btnCompartilhar" style="display: none;">
+            <i class="bi bi-share me-2"></i>Compartilhar
+        </button>
+    </div>
+
+    <!-- Pré-visualização (é exatamente isso que vira imagem) -->
+    <div class="table-card p-2" style="overflow-x: auto;">
+        <div id="areaExportar" class="planilha">
+            {% for mes in meses %}
+            <table class="planilha-tabela">
+                <thead>
+                    <tr><th colspan="{{ instrumentos|length|add:1 }}" class="planilha-mes">{{ mes.data|date:"F"|upper }}</th></tr>
+                    <tr>
+                        <th>Dia</th>
+                        {% for inst in instrumentos %}<th>{{ inst.nome }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linha in mes.linhas %}
+                    <tr>
+                        <td>{{ linha.escala.data|date:"j" }}</td>
+                        {% for celula in linha.celulas %}<td>{{ celula.texto }}</td>{% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+            <p class="planilha-legenda">* Ministrante</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="table-card text-center py-5 px-3 text-muted">
+        <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
+        Nenhum culto entre {{ inicio|date:"d/m/Y" }} e {{ fim|date:"d/m/Y" }}.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .planilha {
+        display: inline-block;
+        min-width: 100%;
+        background: #fff;
+        padding: 12px;
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+    }
+    .planilha-tabela {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 820px;
+        margin-bottom: 16px;
+        color: #000;
+    }
+    .planilha-tabela th,
+    .planilha-tabela td {
+        border: 1px solid #bfbfbf;
+        padding: 4px 10px;
+        text-align: center;
+        font-size: 15px;
+        white-space: nowrap;
+    }
+    .planilha-tabela thead tr:last-child th {
+        font-weight: 700;
+    }
+    .planilha-tabela th.planilha-mes {
+        background: #7030a0;
+        color: #fff;
+        font-size: 16px;
+        letter-spacing: 0.5px;
+    }
+    .planilha-legenda {
+        font-size: 12px;
+        color: #555;
+        margin: 0;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const area = document.getElementById('areaExportar');
+
+if (area) {
+    const nomeArquivo = "escala_{{ inicio|date:'Y-m-d' }}_a_{{ fim|date:'Y-m-d' }}.png";
+    const btnBaixar = document.getElementById('btnBaixar');
+    const btnCompartilhar = document.getElementById('btnCompartilhar');
+
+    const gerarImagem = () => html2canvas(area, { scale: 2, backgroundColor: '#ffffff', windowWidth: area.scrollWidth + 40 })
+        .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
+
+    btnBaixar.addEventListener('click', async () => {
+        btnBaixar.disabled = true;
+        try {
+            const blob = await gerarImagem();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nomeArquivo;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        } finally {
+            btnBaixar.disabled = false;
+        }
+    });
+
+    // Celular: compartilhar direto (WhatsApp, etc.)
+    if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] })) {
+        btnCompartilhar.style.display = '';
+        btnCompartilhar.addEventListener('click', async () => {
+            btnCompartilhar.disabled = true;
+            try {
+                const blob = await gerarImagem();
+                await navigator.share({ files: [new File([blob], nomeArquivo, { type: 'image/png' })], title: 'Escala do louvor' });
+            } catch (e) {
+                /* usuário cancelou */
+            } finally {
+                btnCompartilhar.disabled = false;
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

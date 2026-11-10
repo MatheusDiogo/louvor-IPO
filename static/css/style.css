@@ -290,6 +290,82 @@ button, input, select, textarea {
     border-radius: 24px !important;
 }
 
+/* Grade da escala de integrantes */
+.grade-escala {
+    min-width: 760px;
+}
+
+.grade-escala th {
+    background: #f8faf9;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #6c757d;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.grade-escala .col-dia {
+    width: 80px;
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.grade-escala thead .col-dia {
+    background: #f8faf9;
+}
+
+.celula-escala {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2px 6px;
+    width: 100%;
+    min-height: 64px;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    font-size: 0.9rem;
+    text-align: center;
+    color: inherit;
+}
+
+.celula-escala:hover,
+.celula-escala:focus-visible {
+    background: #f0fdf4;
+}
+
+.celula-escala .membro {
+    white-space: nowrap;
+}
+
+.celula-mobile {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f3f2;
+    text-align: left;
+}
+
+.celula-mobile:last-child {
+    border-bottom: 0;
+}
+
+.celula-mobile .instrumento-label {
+    min-width: 90px;
+}
+
+.celula-escala .membro:not(:last-child)::after {
+    content: ",";
+    color: #6c757d;
+    font-weight: normal;
+}
+
 /* ---------- Celular ---------- */
 @media (max-width: 575.98px) {
     .login-card {

@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import equipe, views
 
 urlpatterns = [
     # Lista de escalas futuras
@@ -19,6 +19,12 @@ urlpatterns = [
     # Músicas na escala
     path('<int:pk>/musica/adicionar/', views.escala_musica_adicionar, name='escala_musica_adicionar'),
     path('musica/<int:item_pk>/excluir/', views.escala_musica_excluir, name='escala_musica_excluir'),
+
+    # Escala de integrantes (somente líderes)
+    path('equipe/', equipe.escala_equipe, name='escala_equipe'),
+    path('equipe/data/', equipe.escala_equipe_adicionar_data, name='escala_equipe_adicionar_data'),
+    path('equipe/<int:pk>/celula/', equipe.escala_equipe_celula, name='escala_equipe_celula'),
+    path('equipe/exportar/', equipe.escala_equipe_exportar, name='escala_equipe_exportar'),
 
     # API AJAX
     path('api/tons/<int:musica_id>/', views.api_tons_musica, name='api_tons_musica'),

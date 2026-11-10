@@ -7,11 +7,11 @@
     <div class="page-header">
         <div>
             <h2 class="page-title">Culto</h2>
-            <p class="page-subtitle">Próximas escalas do ministério de louvor.</p>
+            <p class="page-subtitle">Próximos cultos e as músicas de cada um.</p>
         </div>
         {% if user.is_lider %}
         <button type="button" class="btn-login btn-acao" onclick="novaEscala()">
-            <i class="bi bi-plus-lg me-2"></i>Nova Escala
+            <i class="bi bi-plus-lg me-2"></i>Novo Culto
         </button>
         {% endif %}
     </div>
@@ -30,6 +30,11 @@
                         <span class="text-muted small d-block text-truncate">
                             {{ escala.data|date:"d/m/Y" }} · {{ escala.total_musicas }} música{{ escala.total_musicas|pluralize }}
                         </span>
+                        {% if escala.minhas_funcoes %}
+                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle mt-1 text-wrap text-start">
+                            <i class="bi bi-person-check-fill me-1"></i>Você está escalado: {{ escala.minhas_funcoes|join:", " }}{% if escala.eu_ministro %} · <i class="bi bi-star-fill text-warning"></i> Ministrante{% endif %}
+                        </span>
+                        {% endif %}
                         {% if escala.observacao %}
                         <span class="text-muted small d-block text-break-word">
                             <i class="bi bi-chat-left-text me-1"></i>{{ escala.observacao|truncatechars:80 }}
@@ -51,7 +56,7 @@
                             onclick="editarEscala(this)" aria-label="Editar data e observação">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <form method="post" action="{% url 'escala_excluir' escala.pk %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir a escala de {{ escala.data|date:"d/m/Y" }} e todas as suas músicas?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" aria-label="Excluir escala">
+                    <form method="post" action="{% url 'escala_excluir' escala.pk %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir o culto de {{ escala.data|date:"d/m/Y" }}? As músicas e a escala de integrantes desse dia serão apagadas.')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" aria-label="Excluir culto">
                         <i class="bi bi-trash"></i>
                     </button></form>
                     {% endif %}
@@ -61,14 +66,14 @@
         {% empty %}
         <div class="table-card text-center py-5 text-muted">
             <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
-            Nenhuma escala futura cadastrada.
+            Nenhum culto futuro cadastrado.
         </div>
         {% endfor %}
     </div>
 </div>
 
 {% if user.is_lider %}
-<!-- Modal: Nova / Editar Escala -->
+<!-- Modal: Nova / Editar Culto -->
 <div class="modal fade" id="modalEscala" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -77,7 +82,7 @@
 
                 <div class="modal-header border-0 pt-4 px-4">
                     <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="modalEscalaTitulo">
-                        <i class="bi bi-calendar-plus me-2"></i>Nova Escala
+                        <i class="bi bi-calendar-plus me-2"></i>Novo Culto
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
@@ -119,7 +124,7 @@
     function novaEscala() {
         document.getElementById('escala_data').value = '';
         document.getElementById('escala_obs').value = '';
-        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Nova Escala';
+        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Novo Culto';
         document.getElementById('formEscala').action = "{% url 'escala_criar' %}";
         abrirModal('modalEscala');
     }
@@ -127,7 +132,7 @@
     function editarEscala(btn) {
         document.getElementById('escala_data').value = btn.dataset.data;
         document.getElementById('escala_obs').value = btn.dataset.obs;
-        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Escala';
+        document.getElementById('modalEscalaTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Culto';
         document.getElementById('formEscala').action = urlEditarEscala.replace('/0/', `/${btn.dataset.id}/`);
         abrirModal('modalEscala');
     }

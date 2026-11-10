@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Escalas | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Escalas</h2>
+            <p class="page-subtitle">Quem toca e canta em cada culto.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap header-actions">
+            <a href="{% url 'escala_equipe_exportar' %}?inicio={{ mes|date:'Y-m-d' }}" class="btn btn-outline-success rounded-pill px-4 flex-grow-1">
+                <i class="bi bi-image me-2"></i>Exportar
+            </a>
+            <button type="button" class="btn-login btn-acao flex-grow-1" data-bs-toggle="modal" data-bs-target="#modalData">
+                <i class="bi bi-calendar-plus me-2"></i>Adicionar data
+            </button>
+        </div>
+    </div>
+
+    <!-- Navegação entre meses -->
+    <div class="d-flex align-items-center justify-content-between mb-3 table-card px-2 py-2">
+        <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Mês anterior"><i class="bi bi-chevron-left"></i></a>
+        <span class="fw-bold text-uppercase" style="color: var(--primary-green); letter-spacing: 1px;">{{ mes|date:"F Y" }}</span>
+        <a href="?mes={{ mes_proximo|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Próximo mês"><i class="bi bi-chevron-right"></i></a>
+    </div>
+
+    {% if alertas %}
+    <div class="alert alert-danger rounded-3 small py-2">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        Escalados {{ limite }}x ou mais neste mês:
+        {% for a in alertas %}<strong>{{ a.nome }}</strong> ({{ a.vezes }}x){% if not forloop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    <p class="small text-muted mb-2">
+        <i class="bi bi-star-fill text-warning"></i> Ministrante &nbsp;·&nbsp;
+        <span class="text-danger fw-semibold">Vermelho</span> = escalado {{ limite }}x ou mais no mês &nbsp;·&nbsp;
+        Toque em uma célula para editar.
+    </p>
+
+    {% if linhas %}
+    <!-- Computador: tabela igual à planilha -->
+    <div class="table-card d-none d-md-block">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 grade-escala">
+                <thead>
+                    <tr>
+                        <th class="col-dia">Dia</th>
+                        {% for inst in instrumentos %}<th>{{ inst.nome }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linha in linhas %}
+                    <tr>
+                        <td class="col-dia">
+                            <div class="d-flex align-items-center justify-content-between gap-1">
+                                <a href="{% url 'escala_visualizar' linha.escala.pk %}" class="text-decoration-none text-dark" title="Ver culto">
+                                    <span class="fw-bold fs-5 d-block lh-1">{{ linha.escala.data|date:"d" }}</span>
+                                    <small class="text-muted">{{ linha.escala.data|date:"D" }}</small>
+                                </a>
+                                <form method="post" action="{% url 'escala_excluir' linha.escala.pk %}" class="m-0"
+                                      onsubmit="return confirm('Excluir o culto de {{ linha.escala.data|date:"d/m/Y" }}? A escala e as músicas desse dia serão apagadas.')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0" aria-label="Excluir data"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                        {% for celula in linha.celulas %}
+                        <td class="p-0">
+                            <button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
+                                {% for m in celula.membros %}
+                                <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}" {% if m.alerta %}title="Escalado {{ m.vezes }}x no mês"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                                {% empty %}
+                                <span class="text-muted opacity-50">—</span>
+                                {% endfor %}
+                            </button>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Celular: um card por data -->
+    <div class="d-md-none d-flex flex-column gap-3">
+        {% for linha in linhas %}
+        <div class="table-card">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style="background: #f8faf9;">
+                <a href="{% url 'escala_visualizar' linha.escala.pk %}" class="text-decoration-none text-dark fw-bold">
+                    {{ linha.escala.data|date:"d/m" }} <span class="fw-normal text-muted small">· {{ linha.escala.data|date:"l" }}</span>
+                </a>
+                <form method="post" action="{% url 'escala_excluir' linha.escala.pk %}" class="m-0"
+                      onsubmit="return confirm('Excluir o culto de {{ linha.escala.data|date:"d/m/Y" }}? A escala e as músicas desse dia serão apagadas.')">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-link text-danger" aria-label="Excluir data"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
+            {% for celula in linha.celulas %}
+            <button type="button" class="celula-escala celula-mobile" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
+                <span class="text-secondary small fw-semibold instrumento-label">{{ celula.instrumento.nome }}</span>
+                <span class="flex-grow-1 text-end">
+                    {% for m in celula.membros %}
+                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                    {% empty %}
+                    <span class="text-muted opacity-50">Toque para escalar</span>
+                    {% endfor %}
+                </span>
+                <i class="bi bi-chevron-right text-muted small"></i>
+            </button>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="table-card text-center py-5 px-3 text-muted">
+        <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
+        Nenhum culto em {{ mes|date:"F" }}. Use <strong>Adicionar data</strong> para começar.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: adicionar data -->
+<div class="modal fade" id="modalData" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'escala_equipe_adicionar_data' %}">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);"><i class="bi bi-calendar-plus me-2"></i>Adicionar data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <label class="form-label small fw-bold text-secondary" for="novaData">Data do culto</label>
+                    <div class="input-group-modern">
+                        <i class="bi bi-calendar text-muted"></i>
+                        <input type="date" name="data" id="novaData" required>
+                    </div>
+                    <small class="text-muted">O culto também aparecerá na tela <strong>Culto</strong> para adicionar as músicas.</small>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login btn-acao">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: editar célula (integrantes de um instrumento no culto) -->
+<div class="modal fade" id="modalCelula" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form method="post" id="formCelula" class="d-flex flex-column" style="min-height: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="instrumento_id" id="celulaInstrumento">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="celulaTitulo"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pt-0">
+                    <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante do culto.</p>
+                    <div class="list-group" id="celulaLista"></div>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login btn-acao">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ dados_modal|json_script:"dadosEscala" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dadosEscala = JSON.parse(document.getElementById('dadosEscala').textContent);
+const urlCelula = "{% url 'escala_equipe_celula' 0 %}";
+
+function editarCelula(btn) {
+    const escalaId = btn.dataset.escala;
+    const instId = btn.dataset.instrumento;
+    const inst = dadosEscala.instrumentos[instId];
+    const selecionados = (dadosEscala.celulas[`${escalaId}-${instId}`] || []).map(String);
+    const ministrante = String(dadosEscala.ministrante[escalaId] || '');
+    const lista = document.getElementById('celulaLista');
+
+    document.getElementById('formCelula').action = urlCelula.replace('/0/', `/${escalaId}/`);
+    document.getElementById('celulaInstrumento').value = instId;
+    document.getElementById('celulaTitulo').textContent = `${inst.nome} · ${dadosEscala.datas[escalaId]}`;
+    lista.replaceChildren();
+
+    if (!inst.membros.length) {
+        const vazio = document.createElement('div');
+        vazio.className = 'text-muted small text-center py-3';
+        vazio.textContent = `Nenhum integrante tem "${inst.nome}" cadastrado. Cadastre em Integrantes.`;
+        lista.append(vazio);
+    }
+
+    inst.membros.forEach(m => {
+        const id = String(m.id);
+        const marcado = selecionados.includes(id);
+        const vezes = (dadosEscala.contagem[id] || 0);
+        const linha = document.createElement('div');
+        linha.className = 'list-group-item d-flex align-items-center gap-2 py-2';
+        const rotulo = document.createElement('label');
+        rotulo.className = 'd-flex align-items-center gap-3 flex-grow-1 py-1';
+        rotulo.style.cursor = 'pointer';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.name = 'usuarios'; cb.value = id; cb.checked = marcado;
+        cb.className = 'form-check-input m-0 flex-shrink-0';
+
+        const nome = document.createElement('span');
+        nome.className = 'flex-grow-1';
+        nome.textContent = m.nome;
+        const info = document.createElement('small');
+        info.className = 'd-block ' + (vezes >= dadosEscala.limite ? 'text-danger fw-semibold' : 'text-muted');
+        info.textContent = vezes ? `${vezes}x no mês` : 'Nenhuma vez no mês';
+        nome.append(info);
+
+        const estrela = document.createElement('input');
+        estrela.type = 'checkbox'; estrela.name = 'ministrante'; estrela.value = id;
+        estrela.className = 'btn-check';
+        estrela.id = `min_${id}`;
+        estrela.checked = marcado && ministrante === id;
+        estrela.disabled = !marcado;
+        const estrelaLabel = document.createElement('label');
+        estrelaLabel.className = 'btn btn-sm btn-outline-warning rounded-pill flex-shrink-0';
+        estrelaLabel.htmlFor = estrela.id;
+        estrelaLabel.title = 'Ministrante';
+        estrelaLabel.innerHTML = '<i class="bi bi-star-fill"></i>';
+
+        // Só um ministrante por vez; só pode ser ministrante quem está marcado
+        estrela.addEventListener('change', () => {
+            if (estrela.checked) {
+                lista.querySelectorAll('input[name="ministrante"]').forEach(o => { if (o !== estrela) o.checked = false; });
+            }
+        });
+        cb.addEventListener('change', () => {
+            estrela.disabled = !cb.checked;
+            if (!cb.checked) estrela.checked = false;
+        });
+
+        rotulo.append(cb, nome);
+        linha.append(rotulo, estrela, estrelaLabel);
+        lista.append(linha);
+    });
+
+    abrirModal('modalCelula');
+}
+</script>
+{% endblock %}
