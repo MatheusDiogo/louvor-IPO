@@ -1,121 +1,155 @@
 {% extends "base.html" %}
 
+{% block title %}Músicas | Louvor IPO{% endblock %}
+
 {% block content %}
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="py-3 py-md-4">
+    <div class="page-header">
         <div>
-            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px; margin-bottom: 0;">
-                Repertório de Músicas
-            </h2>
-            <p class="text-secondary opacity-75 small">Gerencie as letras, cifras e links do YouTube.</p>
+            <h2 class="page-title">Repertório de Músicas</h2>
+            <p class="page-subtitle">{% if user.is_lider %}Gerencie as cifras e links do YouTube.{% else %}Cifras e links do YouTube.{% endif %}</p>
         </div>
 
-        <button class="btn-login" onclick="novaMusica()" style="width: auto; padding: 10px 24px;">
+        {% if user.is_lider %}
+        <button type="button" class="btn-login btn-acao" onclick="novaMusica()">
             <i class="bi bi-plus-lg me-2"></i>Nova Música
         </button>
+        {% endif %}
     </div>
+
+    {% if musicas %}
+    <div class="mb-3">
+        <div class="input-group-modern mb-0 bg-white">
+            <i class="bi bi-search text-muted"></i>
+            <input type="search" id="buscaMusica" placeholder="Buscar música..." aria-label="Buscar música">
+        </div>
+    </div>
+    {% endif %}
 
     <div class="table-card">
         <div class="table-responsive">
             <table class="table table-hover table-modern mb-0">
                 <thead>
                     <tr>
-                        <th class="text-secondary small text-uppercase fw-bold w-50">Título</th>
-                        <th class="text-secondary small text-uppercase fw-bold w-25">Tons/Cifras</th>
-                        <th class="text-secondary small text-uppercase fw-bold w-25 text-end">Ações</th>
+                        <th class="text-secondary small text-uppercase fw-bold">Título</th>
+                        <th class="text-secondary small text-uppercase fw-bold text-nowrap">Cifras</th>
+                        {% if user.is_lider %}<th class="text-secondary small text-uppercase fw-bold text-end">Ações</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for musica in musicas %}
-                    <tr>
+                    <tr data-busca="{{ musica.nome|lower }}">
                         <td class="fw-medium text-dark">
                             <div class="d-flex align-items-center">
-                                <div class="card-icon mb-0 me-3" style="width: 35px; height: 35px; font-size: 1rem; border-radius: 8px;">
-                                    🎵
-                                </div>
-                                <div>
-                                    <span class="d-block">{{ musica.nome }}</span>
+                                <div class="card-icon card-icon-sm me-3 d-none d-sm-flex">🎵</div>
+                                <div class="text-break-word">
+                                    <a href="{% url 'detalhes_musica' musica.id %}" class="d-block text-dark text-decoration-none">{{ musica.nome }}</a>
                                     {% if musica.link_youtube %}
-                                    <a href="{{ musica.link_youtube }}" target="_blank" class="text-danger small text-decoration-none">
-                                        <i class="bi bi-youtube"></i> Ver no YouTube
+                                    <a href="{{ musica.link_youtube }}" target="_blank" rel="noopener" class="text-danger small text-decoration-none">
+                                        <i class="bi bi-youtube"></i> YouTube
                                     </a>
                                     {% endif %}
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <a href="/musicas/{{ musica.id }}/" class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">
-                                <i class="bi bi-music-note"></i> <span class="d-none d-md-inline">{{ musica.tons.count }} ton(s)</span>
+                            <a href="{% url 'detalhes_musica' musica.id %}" class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 text-decoration-none">
+                                <i class="bi bi-music-note"></i> {{ musica.tons.all|length }}<span class="d-none d-md-inline"> ton(s)</span>
                             </a>
                         </td>
+                        {% if user.is_lider %}
                         <td class="text-end">
-                            <div class="d-flex justify-content-end gap-2">
-                                <button 
-                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3" 
-                                    onclick="editarMusica('{{ musica.id }}','{{ musica.nome }}','{{ musica.link_youtube }}')">
+                            <div class="d-flex justify-content-end gap-1">
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3"
+                                    data-id="{{ musica.id }}" data-nome="{{ musica.nome }}" data-youtube="{{ musica.link_youtube|default:'' }}"
+                                    onclick="editarMusica(this)" aria-label="Editar {{ musica.nome }}">
                                     <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
                                 </button>
-                                
-                                <a href="/musicas/excluir/{{ musica.id }}/" 
-                                   class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3"
-                                   onclick="return confirm('Excluir esta música e todas as suas cifras?')">
+
+                                <form method="post" action="{% url 'excluir_musica' musica.id %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir esta música e todas as suas cifras?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3" aria-label="Excluir {{ musica.nome }}">
                                     <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Excluir</span>
-                                </a>
+                                </button></form>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
+                        <td colspan="{% if user.is_lider %}3{% else %}2{% endif %}" class="text-center py-5 text-muted">
                             <i class="bi bi-search d-block fs-2 mb-2 opacity-50"></i>
                             Nenhuma música encontrada no repertório.
                         </td>
                     </tr>
                     {% endfor %}
+                    <tr id="semResultado" style="display: none;">
+                        <td colspan="{% if user.is_lider %}3{% else %}2{% endif %}" class="text-center py-4 text-muted">Nenhuma música encontrada.</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
+{% if user.is_lider %}
 <div class="modal fade" id="modalMusica" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-            <form method="post" action="/musicas/salvar/">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'salvar_musica' %}">
                 {% csrf_token %}
                 <input type="hidden" name="id" id="musica_id">
 
                 <div class="modal-header border-0 pt-4 px-4">
-                    <h5 class="fw-bold" style="color: var(--primary-green);">
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="modalMusicaTitulo">
                         <i class="bi bi-music-note-list me-2"></i>Dados da Música
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
 
                 <div class="modal-body px-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">Nome da Música</label>
+                        <label class="form-label small fw-bold text-secondary" for="musica_nome">Nome da Música</label>
                         <div class="input-group-modern">
                             <i class="bi bi-fonts text-muted"></i>
-                            <input type="text" name="nome" id="musica_nome" placeholder="Ex: Grandioso és Tu" required>
+                            <input type="text" name="nome" id="musica_nome" placeholder="Ex: Grandioso és Tu" maxlength="200" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">Link do YouTube</label>
+                        <label class="form-label small fw-bold text-secondary" for="musica_youtube">Link do YouTube</label>
                         <div class="input-group-modern">
                             <i class="bi bi-youtube text-muted"></i>
-                            <input type="url" name="link_youtube" id="musica_youtube" placeholder="https://youtube.com/...">
+                            <input type="url" name="link_youtube" id="musica_youtube" placeholder="https://youtube.com/..." inputmode="url" autocapitalize="none">
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-footer border-0 pb-4 px-4">
                     <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar Música</button>
+                    <button type="submit" class="btn-login btn-acao">Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const busca = document.getElementById('buscaMusica');
+if (busca) {
+    const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    busca.addEventListener('input', () => {
+        const termo = normalizar(busca.value.trim());
+        let visiveis = 0;
+        document.querySelectorAll('tr[data-busca]').forEach(tr => {
+            const mostrar = normalizar(tr.dataset.busca).includes(termo);
+            tr.style.display = mostrar ? '' : 'none';
+            if (mostrar) visiveis++;
+        });
+        document.getElementById('semResultado').style.display = visiveis ? 'none' : '';
+    });
+}
+</script>
 {% endblock %}

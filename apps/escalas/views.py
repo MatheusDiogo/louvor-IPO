@@ -2,24 +2,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib import messages
+from django.views.decorators.http import require_POST
+from django.db.models import Count
 from .models import Escala, EscalaMusica
 from apps.musicas.models import Musica, Tom
-from datetime import datetime
-from django.core.exceptions import PermissionDenied
-
-def requer_lider(view_func):
-    """Decorator que bloqueia acesso se não for líder."""
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_lider:
-            raise PermissionDenied
-        return view_func(request, *args, **kwargs)
-    return wrapper
+from apps.core.decorators import requer_lider
+from apps.core.utils import chave_alfabetica
 
 @login_required
 def escala_list(request):
     """Lista apenas escalas futuras (data >= hoje)."""
     hoje = timezone.localdate()
-    escalas = Escala.objects.filter(data__gte=hoje).order_by('data')
+    escalas = Escala.objects.filter(data__gte=hoje).order_by('data').annotate(total_musicas=Count('itens'))
     return render(request, 'escalas/escala_list.html', {'escalas': escalas, 'hoje': hoje})
 
 
@@ -83,6 +77,7 @@ def escala_editar(request, pk):
 
 @login_required
 @requer_lider
+@require_POST
 def escala_excluir(request, pk):
     """Exclui uma escala."""
     escala = get_object_or_404(Escala, pk=pk)
@@ -92,6 +87,7 @@ def escala_excluir(request, pk):
 
 
 @login_required
+@requer_lider
 def escala_detalhe(request, pk):
     """Detalhe/edição da escala: adicionar músicas com tom."""
     escala = get_object_or_404(Escala, pk=pk)
@@ -105,6 +101,7 @@ def escala_detalhe(request, pk):
     ).exclude(
         id__in=musicas_na_escala_ids
     ).distinct()
+    musicas_disponiveis = sorted(musicas_disponiveis, key=lambda m: chave_alfabetica(m.nome))
 
     itens = escala.itens.select_related('musica', 'tom').order_by('id')
 
@@ -116,6 +113,7 @@ def escala_detalhe(request, pk):
 
 
 @login_required
+@requer_lider
 def escala_musica_adicionar(request, pk):
     """Adiciona uma música (com tom) à escala."""
     escala = get_object_or_404(Escala, pk=pk)
@@ -142,6 +140,8 @@ def escala_musica_adicionar(request, pk):
 
 
 @login_required
+@requer_lider
+@require_POST
 def escala_musica_excluir(request, item_pk):
     """Remove uma música da escala."""
     item = get_object_or_404(EscalaMusica, pk=item_pk)

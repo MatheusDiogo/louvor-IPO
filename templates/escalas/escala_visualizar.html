@@ -1,61 +1,59 @@
 {% extends "base.html" %}
 
+{% block title %}Culto {{ escala.data|date:"d/m" }} | Louvor IPO{% endblock %}
+
 {% block content %}
-<div class="py-4">
+<div class="py-3 py-md-4">
     <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
+        <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item">
-                <a href="{% url 'escala_list' %}" class="text-success text-decoration-none">Escalas</a>
+                <a href="{% url 'escala_list' %}" class="text-success text-decoration-none">Culto</a>
             </li>
-            <li class="breadcrumb-item active">Visualizar — {{ escala.data|date:"d/m/Y" }}</li>
+            <li class="breadcrumb-item active">{{ escala.data|date:"d/m/Y" }}</li>
         </ol>
     </nav>
 
-    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div class="page-header align-items-start">
         <div>
-            <h2 class="fw-bold mb-1" style="color: var(--primary-green); letter-spacing: -1px;">
-                📋 Escala — {{ escala.data|date:"d \d\e F \d\e Y" }}
-            </h2>
+            <h2 class="page-title">{{ escala.data|date:"l, d \d\e F" }}</h2>
             {% if escala.observacao %}
-            <p class="text-secondary small mb-0">
-                <i class="bi bi-chat-left-text me-1"></i>{{ escala.observacao }}
+            <p class="page-subtitle text-break-word">
+                <i class="bi bi-chat-left-text me-1"></i>{{ escala.observacao|linebreaksbr }}
             </p>
             {% endif %}
-            <span class="badge bg-light text-muted border mt-2">
-                <i class="bi bi-eye me-1"></i>Modo visualização — somente leitura
-            </span>
         </div>
-        <a href="{% url 'escala_list' %}" class="btn btn-outline-secondary rounded-pill px-4" style="border-color:#dee2e6;">
-            <i class="bi bi-arrow-left me-2"></i>Voltar
+        {% if user.is_lider %}
+        <a href="{% url 'escala_detalhe' escala.pk %}" class="btn btn-outline-success rounded-pill px-4">
+            <i class="bi bi-pencil me-2"></i>Editar músicas
         </a>
+        {% endif %}
     </div>
 
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
         {% for item in itens %}
-        <div class="col-md-4">
-            <div class="table-card p-4 h-100 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="table-card p-3 p-md-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                    <div class="text-break-word" style="min-width: 0;">
                         <span class="text-muted small">#{{ forloop.counter }}</span>
                         <h5 class="fw-bold mb-0 mt-1">{{ item.musica.nome }}</h5>
                     </div>
-                    <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 ms-2 flex-shrink-0">
-                        <i class="bi bi-music-note"></i> {{ item.tom.tom }}
+                    <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 flex-shrink-0 fs-6">
+                        {{ item.tom.tom }}
                     </span>
                 </div>
 
-                {% if item.musica.link_youtube %}
-                <a href="{{ item.musica.link_youtube }}" target="_blank"
-                   class="text-danger small text-decoration-none mb-3 d-inline-block">
-                    <i class="bi bi-youtube me-1"></i>Ver no YouTube
-                </a>
-                {% endif %}
-
-                <div class="mt-auto">
-                    <a href="{{ item.tom.pdf.url }}" target="_blank"
-                       class="btn btn-outline-success rounded-pill w-100">
-                        <i class="bi bi-file-earmark-pdf me-2"></i>Visualizar Cifra PDF
+                <div class="mt-auto d-flex gap-2">
+                    <a href="{{ item.tom.pdf.url }}" target="_blank" rel="noopener"
+                       class="btn btn-success rounded-pill flex-grow-1">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Cifra
                     </a>
+                    {% if item.musica.link_youtube %}
+                    <a href="{{ item.musica.link_youtube }}" target="_blank" rel="noopener"
+                       class="btn btn-outline-danger rounded-pill flex-grow-1">
+                        <i class="bi bi-youtube me-2"></i>YouTube
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -63,7 +61,7 @@
         <div class="col-12">
             <div class="table-card text-center py-5 text-muted">
                 <i class="bi bi-music-note-list d-block fs-2 mb-2 opacity-50"></i>
-                <p>Nenhuma música nesta escala ainda.</p>
+                <p class="mb-0">Nenhuma música nesta escala ainda.</p>
             </div>
         </div>
         {% endfor %}

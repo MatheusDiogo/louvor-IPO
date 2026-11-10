@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <meta name="theme-color" content="#166534">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <title>Login | Louvor IPO</title>
 </head>
 <body>
@@ -14,31 +15,35 @@
             <div class="login-header">
                 <h2>LOUVOR <span style="font-weight: 300; color: #1a2e1a;">IPO</span></h2>
             </div>
-            
+
             <form method="post">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
                 <div class="input-group-modern">
-                    <i class="bi bi-person text-muted"></i>
-                    <input type="text" name="username" placeholder="Usuário" required>
+                    <i class="bi bi-envelope text-muted"></i>
+                    <input type="text" name="username" placeholder="E-mail" value="{{ email }}"
+                           inputmode="email" autocomplete="username" autocapitalize="none"
+                           autocorrect="off" spellcheck="false" aria-label="E-mail" required>
                 </div>
-                
+
                 <div class="input-group-modern">
                     <i class="bi bi-lock text-muted"></i>
-                    <input type="password" name="password" id="password" placeholder="Senha" required>
-                    <i class="bi bi-eye toggle-password" onclick="togglePassword()" style="cursor: pointer;"></i>
+                    <input type="password" name="password" id="password" placeholder="Senha"
+                           autocomplete="current-password" aria-label="Senha" required>
+                    <i class="bi bi-eye toggle-password" onclick="togglePassword('password', this)"
+                       role="button" aria-label="Mostrar senha"></i>
                 </div>
 
                 {% if erro %}
-                <div class="login-error">
+                <div class="login-error" role="alert">
                     <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>Usuário ou senha incorretos</span>
+                    <span>{{ erro }}</span>
                 </div>
                 {% endif %}
 
                 <button type="submit" class="btn-login">Entrar</button>
-                <div style="text-align: center; margin-top: 12px;">
-                    <a href="{% url 'password_reset' %}" style="font-size: 0.82rem; color: #555;">Esqueci minha senha</a>
-                </div>
+                <a href="{% url 'password_reset' %}" class="login-link">Esqueci minha senha</a>
             </form>
         </div>
     </div>

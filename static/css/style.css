@@ -1,10 +1,14 @@
 :root {
     --primary-green: #166534;
     --primary-hover: #14532d;
-    --bg-light: #f0fdf4 !important;
+    --bg-light: #f0fdf4;
     --text-dark: #1a2e1a;
     --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     --border-color: #dcfce7;
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
@@ -12,6 +16,11 @@ body {
     font-family: "Inter", system-ui, -apple-system, sans-serif;
     color: var(--text-dark);
     margin: 0;
+    -webkit-text-size-adjust: 100%;
+}
+
+button, input, select, textarea {
+    font-family: inherit;
 }
 
 /* Navbar */
@@ -24,13 +33,42 @@ body {
     letter-spacing: -0.5px;
 }
 
+.nav-user {
+    max-width: 40vw;
+}
+
+/* Cabeçalho das páginas */
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    color: var(--primary-green);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 0;
+    font-size: 1.75rem;
+}
+
+.page-subtitle {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin: 4px 0 0;
+}
+
 /* Centralização do Login */
 .login-container {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 20px 16px;
 }
 
 .login-card {
@@ -51,6 +89,22 @@ body {
 .login-header h2 {
     color: var(--primary-green);
     font-weight: 800;
+    margin: 0;
+}
+
+.login-header p {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 4px 0 0;
+}
+
+.login-link {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.85rem;
+    color: #555;
+    padding: 6px 0;
 }
 
 /* Inputs Modernos */
@@ -75,19 +129,27 @@ body {
     border: none;
     outline: none;
     width: 100%;
+    min-width: 0;
     padding-left: 10px;
     background: transparent;
+    font-size: 16px; /* evita zoom automático no iPhone */
+}
+
+.toggle-password {
+    cursor: pointer;
+    padding: 4px;
+    color: #6c757d;
+}
+
+/* 16px nos campos evita o zoom automático do iOS ao focar */
+.form-control,
+.form-select {
+    font-size: 16px;
 }
 
 /* Botões */
-.card-body {
-    display: block;
-    width: 100%;
-    text-decoration: none;
-    text-align: center;
-}
-
 .btn-login {
+    display: inline-block;
     width: 100%;
     border: none;
     padding: 14px;
@@ -95,13 +157,24 @@ body {
     background: var(--primary-green);
     color: white;
     font-weight: 600;
+    text-align: center;
+    text-decoration: none;
     margin-top: 10px;
     transition: 0.3s;
+    cursor: pointer;
 }
 
-.btn-login:hover {
+.btn-login:hover,
+.btn-login:focus {
     background: var(--primary-hover);
-    transform: translateY(-1px);
+    color: white;
+}
+
+.btn-acao {
+    width: auto;
+    padding: 10px 24px;
+    margin-top: 0;
+    white-space: nowrap;
 }
 
 /* Dashboard Cards */
@@ -113,10 +186,8 @@ body {
     box-shadow: var(--card-shadow);
 }
 
-.dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 20px -5px rgba(22, 101, 52, 0.12);
-    border-color: #bbf7d0 !important;
+.dashboard-card .card-body {
+    text-align: center;
 }
 
 .card-icon {
@@ -129,6 +200,33 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 1.25rem;
+    flex-shrink: 0;
+}
+
+.dashboard-card .card-icon {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.card-icon-sm {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+/* Hover só em dispositivos com mouse (evita "card preso" no toque) */
+@media (hover: hover) {
+    .btn-login:hover {
+        transform: translateY(-1px);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px -5px rgba(22, 101, 52, 0.12);
+        border-color: #bbf7d0 !important;
+    }
 }
 
 /* Erros */
@@ -160,4 +258,92 @@ body {
 
 .table-modern thead {
     background-color: #f8faf9;
+}
+
+.text-break-word {
+    overflow-wrap: anywhere;
+}
+
+/* Lista de músicas pesquisável (adicionar ao culto) */
+.lista-musicas {
+    max-height: 40vh;
+    overflow-y: auto;
+    border-radius: 12px;
+}
+
+.lista-musicas .list-group-item {
+    padding: 12px 16px;
+}
+
+/* Lista de checkboxes (instrumentos) */
+.check-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.check-list .btn {
+    border-radius: 999px;
+}
+
+.modal-content {
+    border-radius: 24px !important;
+}
+
+/* ---------- Celular ---------- */
+@media (max-width: 575.98px) {
+    .login-card {
+        padding: 28px 20px;
+        border-radius: 20px;
+    }
+
+    .page-title {
+        font-size: 1.4rem;
+    }
+
+    .page-header .btn-acao,
+    .page-header .header-actions {
+        width: 100%;
+    }
+
+    .table-modern th, .table-modern td {
+        padding: 12px 12px !important;
+    }
+
+    .dashboard-card {
+        padding: 0.5rem !important;
+    }
+
+    /* Cards do menu ficam em linha: ícone à esquerda, texto e botão à direita */
+    .dashboard-card .card-body {
+        display: grid !important;
+        grid-template-columns: 56px 1fr;
+        column-gap: 14px;
+        text-align: left;
+        align-items: center;
+    }
+
+    .dashboard-card .card-icon {
+        grid-row: span 2;
+        margin: 0;
+    }
+
+    .dashboard-card .card-title {
+        margin-bottom: 2px;
+    }
+
+    .dashboard-card .card-text {
+        margin-bottom: 0;
+    }
+
+    .dashboard-card .btn-login {
+        grid-column: 1 / -1;
+        margin-top: 12px;
+        padding: 12px;
+    }
+
+    .modal-footer .btn-login,
+    .modal-footer .btn-light {
+        flex: 1;
+    }
 }

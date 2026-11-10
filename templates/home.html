@@ -1,19 +1,39 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="py-4">
-    <div class="mb-5 text-center text-md-start">
-        <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px;">
-            Bem-vindo, {{ user.get_full_name|default:user.username }}
+<div class="py-3 py-md-4">
+    <div class="mb-4 mb-md-5">
+        <h2 class="page-title">
+            Bem-vindo(a), {{ user.first_name|default:user.username }}
         </h2>
-        <p class="text-secondary opacity-75">
-            Gerenciamento de Escalas e Músicas.
-        </p>
+        <p class="page-subtitle">Gerenciamento de Escalas e Músicas.</p>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
+        <div class="col-sm-6 {% if user.is_lider %}col-lg-3{% else %}col-lg-4{% endif %}">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">📋</div>
+                    <h5 class="card-title fw-bold">Culto</h5>
+                    <p class="card-text text-muted small flex-grow-1">Veja quais músicas irão tocar.</p>
+                    <a href="{% url 'escala_list' %}" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 {% if user.is_lider %}col-lg-3{% else %}col-lg-4{% endif %}">
+            <div class="card dashboard-card h-100 p-3">
+                <div class="card-body d-flex flex-column">
+                    <div class="card-icon">🎵</div>
+                    <h5 class="card-title fw-bold">Músicas</h5>
+                    <p class="card-text text-muted small flex-grow-1">Acessar repertório e cifras.</p>
+                    <a href="{% url 'musicas' %}" class="btn-login">Acessar</a>
+                </div>
+            </div>
+        </div>
+
         {% if user.is_lider %}
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-3">
             <div class="card dashboard-card h-100 p-3">
                 <div class="card-body d-flex flex-column">
                     <div class="card-icon">🎤</div>
@@ -24,39 +44,17 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-3">
             <div class="card dashboard-card h-100 p-3">
                 <div class="card-body d-flex flex-column">
                     <div class="card-icon">🎸</div>
                     <h5 class="card-title fw-bold">Instrumentos</h5>
                     <p class="card-text text-muted small flex-grow-1">Controle os instrumentos disponíveis.</p>
-                    <a href="/instrumentos/" class="btn-login">Acessar</a>
+                    <a href="{% url 'instrumentos' %}" class="btn-login">Acessar</a>
                 </div>
             </div>
         </div>
         {% endif %}
-
-        <div class="col-md-4">
-            <div class="card dashboard-card h-100 p-3">
-                <div class="card-body d-flex flex-column">
-                    <div class="card-icon">🎵</div>
-                    <h5 class="card-title fw-bold">Músicas</h5>
-                    <p class="card-text text-muted small flex-grow-1">Acessar repertório e cifras.</p>
-                    <a href="/musicas/" class="btn-login">Acessar</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card dashboard-card h-100 p-3">
-                <div class="card-body d-flex flex-column">
-                    <div class="card-icon">📋</div>
-                    <h5 class="card-title fw-bold">Culto</h5>
-                    <p class="card-text text-muted small flex-grow-1">Veja quais músicas irão tocar.</p>
-                    <a href="{% url 'escala_list' %}" class="btn-login">Acessar</a>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}

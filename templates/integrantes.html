@@ -1,39 +1,37 @@
 {% extends "base.html" %}
 
+{% block title %}Integrantes | Louvor IPO{% endblock %}
+
 {% block content %}
-<div class="py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="py-3 py-md-4">
+    <div class="page-header">
         <div>
-            <h2 class="fw-bold" style="color: var(--primary-green); letter-spacing: -1px;">Integrantes</h2>
-            <p class="text-secondary small">Gerencie os músicos e líderes do ministério.</p>
+            <h2 class="page-title">Integrantes</h2>
+            <p class="page-subtitle">Gerencie os músicos e líderes do ministério.</p>
         </div>
-        <button class="btn-login" style="width: auto; padding: 10px 24px;" 
-                data-bs-toggle="modal" data-bs-target="#modalIntegrante" onclick="limparFormulario()">
+        <button type="button" class="btn-login btn-acao" onclick="novoIntegrante()">
             <i class="bi bi-person-plus me-2"></i>Novo Integrante
         </button>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
         {% for integrante in integrantes %}
-        <div class="col-md-4">
-            <div class="table-card p-4 h-100">
-                <div class="d-flex justify-content-between mb-3">
-                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+        <div class="col-sm-6 col-lg-4">
+            <div class="table-card p-3 p-md-4 h-100 d-flex flex-column">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
                         <i class="bi bi-person fs-4 text-success"></i>
                     </div>
+                    <div class="flex-grow-1 text-break-word" style="min-width: 0;">
+                        <h5 class="fw-bold mb-0">{{ integrante.get_full_name|default:integrante.username }}</h5>
+                        <p class="text-muted small mb-0 text-truncate">{{ integrante.email }}</p>
+                    </div>
                     {% if integrante.is_lider %}
-                        <span class="badge rounded-pill bg-warning text-dark" style="height: fit-content;">Líder</span>
+                    <span class="badge rounded-pill bg-warning text-dark flex-shrink-0">Líder</span>
                     {% endif %}
-                    <a href="/integrantes/excluir/{{ integrante.id }}/" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Excluir este integrante?')">
-                        <i class="bi bi-trash"></i>
-                    </a>
                 </div>
-                
-                <h5 class="fw-bold mb-1">{{ integrante.get_full_name }}</h5>
 
-                <p class="text-muted small mb-3">{{ integrante.email }}</p>
-                
-                <div class="mb-3">
+                <div class="mb-3 d-flex flex-wrap gap-1">
                     {% for inst in integrante.instrumentos.all %}
                         <span class="badge border text-secondary fw-normal">{{ inst.nome }}</span>
                     {% empty %}
@@ -41,70 +39,86 @@
                     {% endfor %}
                 </div>
 
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-secondary w-100 rounded-pill" 
-                            onclick="editarIntegrante('{{ integrante.id }}', '{{ integrante.first_name }}', '{{ integrante.last_name }}', '{{ integrante.email }}', '{{ integrante.is_lider }}', '{{ integrante.instrumentos.all|join:',' }}')">
-                        Editar
+                <div class="d-flex gap-2 mt-auto">
+                    <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1 rounded-pill"
+                            data-id="{{ integrante.id }}"
+                            data-nome="{{ integrante.first_name }}"
+                            data-sobrenome="{{ integrante.last_name }}"
+                            data-email="{{ integrante.email }}"
+                            data-lider="{{ integrante.is_lider|yesno:'1,0' }}"
+                            data-instrumentos="{% for inst in integrante.instrumentos.all %}{{ inst.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                            onclick="editarIntegrante(this)">
+                        <i class="bi bi-pencil me-1"></i>Editar
                     </button>
+                    {% if integrante != user %}
+                    <form method="post" action="{% url 'excluir_integrante' integrante.id %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir {{ integrante.get_full_name|default:integrante.username|escapejs }}?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" aria-label="Excluir integrante">
+                        <i class="bi bi-trash"></i>
+                    </button></form>
+                    {% endif %}
                 </div>
             </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="table-card text-center py-5 text-muted">Nenhum integrante cadastrado.</div>
         </div>
         {% endfor %}
     </div>
 </div>
 
 <div class="modal fade" id="modalIntegrante" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 24px;">
-            <form method="post" action="{% url 'salvar_integrante' %}">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'salvar_integrante' %}" class="d-flex flex-column" style="min-height: 0;">
                 {% csrf_token %}
                 <input type="hidden" name="id" id="inst_id">
-                
+
                 <div class="modal-header border-0 pt-4 px-4">
-                    <h5 class="fw-bold" style="color: var(--primary-green);">Dados do Integrante</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="modalIntegranteTitulo">Novo Integrante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
 
                 <div class="modal-body px-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">Username</label>
-                        <input type="text" name="username" id="inst_username" class="form-control rounded-pill" required>
-                    </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-secondary">Nome</label>
-                            <input type="text" name="first_name" id="inst_nome" class="form-control rounded-pill" required>
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label small fw-bold text-secondary" for="inst_nome">Nome</label>
+                            <input type="text" name="first_name" id="inst_nome" class="form-control rounded-pill" autocomplete="off" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-secondary">Sobrenome</label>
-                            <input type="text" name="last_name" id="inst_sobrenome" class="form-control rounded-pill" required>
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label small fw-bold text-secondary" for="inst_sobrenome">Sobrenome</label>
+                            <input type="text" name="last_name" id="inst_sobrenome" class="form-control rounded-pill" autocomplete="off" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">E-mail</label>
-                        <input type="email" name="email" id="inst_email" class="form-control rounded-pill" required>
+                        <label class="form-label small fw-bold text-secondary" for="inst_email">E-mail <span class="fw-normal">(usado no login)</span></label>
+                        <input type="email" name="email" id="inst_email" class="form-control rounded-pill" autocapitalize="none" autocomplete="off" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">Instrumentos</label>
-                        <select name="instrumentos" id="inst_instrumentos" class="form-select" multiple style="border-radius: 15px;">
+                        <span class="form-label small fw-bold text-secondary d-block mb-2">Instrumentos</span>
+                        <div class="check-list">
                             {% for inst in instrumentos %}
-                                <option value="{{ inst.id }}">{{ inst.nome }}</option>
+                            <input type="checkbox" class="btn-check" name="instrumentos" value="{{ inst.id }}" id="chk_inst_{{ inst.id }}" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-success" for="chk_inst_{{ inst.id }}">{{ inst.nome }}</label>
+                            {% empty %}
+                            <span class="text-muted small">Nenhum instrumento cadastrado.</span>
                             {% endfor %}
-                        </select>
-                        <small class="text-muted">Segure Ctrl (ou Command) para selecionar vários.</small>
+                        </div>
                     </div>
 
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="is_lider" id="inst_lider">
+                        <label class="form-check-label small" for="inst_lider">Líder (pode gerenciar escalas, integrantes e instrumentos)</label>
+                    </div>
                 </div>
 
                 <div class="modal-footer border-0 pb-4 px-4">
                     <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-login" style="width: auto; padding: 10px 30px;">Salvar</button>
+                    <button type="submit" class="btn-login btn-acao">Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
 {% endblock %}

@@ -1,115 +1,78 @@
-function togglePassword() {
-
-    const input = document.getElementById("password");
-
-    if (input.type === "password") {
-        input.type = "text";
-    } else {
-        input.type = "password";
+// Mostrar/ocultar senha (páginas de login e redefinição)
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId || "password");
+    if (!input) return;
+    const mostrar = input.type === "password";
+    input.type = mostrar ? "text" : "password";
+    if (icon) {
+        icon.classList.toggle("bi-eye", !mostrar);
+        icon.classList.toggle("bi-eye-slash", mostrar);
     }
-
 }
 
-document.addEventListener("DOMContentLoaded", function(){
+// Abre um modal do Bootstrap (se o Bootstrap estiver carregado na página)
+function abrirModal(id) {
+    const el = document.getElementById(id);
+    if (!el || typeof bootstrap === "undefined") return;
+    bootstrap.Modal.getOrCreateInstance(el).show();
+}
 
-    setTimeout(() => {
+/* ---------- Instrumentos ---------- */
 
-        const alert = document.querySelector(".login-error");
-
-        if(alert){
-
-            alert.style.transition = "opacity 0.5s";
-            alert.style.opacity = "0";
-
-            setTimeout(() => {
-                alert.remove();
-            }, 500);
-
-        }
-
-    }, 3000);
-
-});
-
-function novoInstrumento(){
-
+function novoInstrumento() {
     document.getElementById("instrumento_id").value = "";
     document.getElementById("instrumento_nome").value = "";
-
-    new bootstrap.Modal(document.getElementById("modalInstrumento")).show();
+    abrirModal("modalInstrumento");
 }
 
-
-function editarInstrumento(id,nome){
-
-    document.getElementById("instrumento_id").value = id;
-    document.getElementById("instrumento_nome").value = nome;
-
-    new bootstrap.Modal(document.getElementById("modalInstrumento")).show();
+function editarInstrumento(btn) {
+    document.getElementById("instrumento_id").value = btn.dataset.id;
+    document.getElementById("instrumento_nome").value = btn.dataset.nome;
+    abrirModal("modalInstrumento");
 }
 
-// Inicializa o modal do Bootstrap
-let modalMusicaElement = document.getElementById('modalMusica');
-let modalMusica = new bootstrap.Modal(modalMusicaElement);
+/* ---------- Músicas ---------- */
 
-// Função para abrir o modal para uma NOVA música (limpa os campos)
 function novaMusica() {
-    document.getElementById('musica_id').value = '';
-    document.getElementById('musica_nome').value = '';
-    document.getElementById('musica_youtube').value = '';
-    
-    // Altera o título do modal se desejar
-    modalMusicaElement.querySelector('.modal-title')?.innerText || 
-    (modalMusicaElement.querySelector('h5').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Música');
-    
-    modalMusica.show();
+    document.getElementById("musica_id").value = "";
+    document.getElementById("musica_nome").value = "";
+    document.getElementById("musica_youtube").value = "";
+    document.getElementById("modalMusicaTitulo").innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Música';
+    abrirModal("modalMusica");
 }
 
-// Função para abrir o modal para EDITAR (preenche os campos)
-function editarMusica(id, nome, youtube) {
-    document.getElementById('musica_id').value = id;
-    document.getElementById('musica_nome').value = nome;
-    document.getElementById('musica_youtube').value = youtube === 'None' ? '' : youtube;
-
-    modalMusicaElement.querySelector('h5').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Música';
-    
-    modalMusica.show();
+function editarMusica(btn) {
+    document.getElementById("musica_id").value = btn.dataset.id;
+    document.getElementById("musica_nome").value = btn.dataset.nome;
+    document.getElementById("musica_youtube").value = btn.dataset.youtube || "";
+    document.getElementById("modalMusicaTitulo").innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Música';
+    abrirModal("modalMusica");
 }
 
-function editarIntegrante(id, nome, sobrenome, email, isLider, instrumentos) {
-    // 1. Abre o modal manualmente (caso o data-bs-toggle falhe)
-    const modal = new bootstrap.Modal(document.getElementById('modalIntegrante'));
-    
-    // 2. Preenche os campos de texto
-    document.getElementById('inst_id').value = id;
-    document.getElementById('inst_nome').value = nome;
-    document.getElementById('inst_sobrenome').value = sobrenome;
-    document.getElementById('inst_email').value = email;
-    // O username geralmente é o email no seu caso
-    if(document.getElementById('inst_username')) {
-        document.getElementById('inst_username').value = email;
-    }
+/* ---------- Integrantes ---------- */
 
-    // 3. Preenche o select múltiplo de instrumentos
-    const selectInstrumentos = document.getElementById('inst_instrumentos');
-    const listaInstrumentos = instrumentos.split(','); // Transforma a string em array
+function novoIntegrante() {
+    const form = document.querySelector("#modalIntegrante form");
+    form.reset();
+    document.getElementById("inst_id").value = "";
+    document.getElementById("modalIntegranteTitulo").textContent = "Novo Integrante";
+    abrirModal("modalIntegrante");
+}
 
-    // Reseta seleções anteriores
-    Array.from(selectInstrumentos.options).forEach(option => {
-        option.selected = false;
+function editarIntegrante(btn) {
+    const d = btn.dataset;
+    document.querySelector("#modalIntegrante form").reset();
+    document.getElementById("inst_id").value = d.id;
+    document.getElementById("inst_nome").value = d.nome;
+    document.getElementById("inst_sobrenome").value = d.sobrenome;
+    document.getElementById("inst_email").value = d.email;
+    document.getElementById("inst_lider").checked = d.lider === "1";
+
+    const ids = (d.instrumentos || "").split(",").filter(Boolean);
+    document.querySelectorAll("#modalIntegrante input[name='instrumentos']").forEach(cb => {
+        cb.checked = ids.includes(cb.value);
     });
 
-    // Marca como selecionado os instrumentos que o integrante já possui
-    Array.from(selectInstrumentos.options).forEach(option => {
-        if (listaInstrumentos.includes(option.text)) {
-            option.selected = true;
-        }
-    });
-
-    modal.show();
-}
-
-function limparFormulario() {
-    document.getElementById('inst_id').value = '';
-    document.querySelector('#modalIntegrante form').reset();
+    document.getElementById("modalIntegranteTitulo").textContent = "Editar Integrante";
+    abrirModal("modalIntegrante");
 }
