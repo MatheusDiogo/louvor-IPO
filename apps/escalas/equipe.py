@@ -124,6 +124,8 @@ def escala_equipe(request):
         key=lambda a: (-a['vezes'], chave_alfabetica(a['nome'])),
     )
 
+    nomes_instrumentos = {inst.id: inst.nome for inst in instrumentos}
+
     # Dados usados pelo modal de edição de cada célula
     dados_modal = {
         'instrumentos': {
@@ -142,6 +144,12 @@ def escala_equipe(request):
             for l in linhas for c in l['celulas']
         },
         'ministrante': {e.id: e.ministrante_id for e in escalas},
+        # quem já está em algum instrumento em cada culto: {culto: {pessoa: [instrumento, nome do instrumento]}}
+        'ocupados': {
+            e.id: {ei.usuario_id: [ei.instrumento_id, nomes_instrumentos.get(ei.instrumento_id, '')]
+                   for ei in e.integrantes.all()}
+            for e in escalas
+        },
         'datas': {e.id: e.data.strftime('%d/%m') for e in escalas},
         'contagem': dict(contagem),
         'limite': LIMITE_ESCALAS_MES,
@@ -192,10 +200,24 @@ def escala_equipe_celula(request, pk):
 
     # Só aceita quem tem o instrumento cadastrado
     permitidos = set(instrumento.musicos.filter(is_active=True).values_list('id', flat=True))
-    selecionados = []
+
+    # Uma pessoa só pode estar em um instrumento por culto
+    em_outro_instrumento = {
+        ei.usuario_id: ei for ei in EscalaIntegrante.objects
+        .filter(escala=escala).exclude(instrumento=instrumento).select_related('usuario', 'instrumento')
+    }
+    selecionados, recusados = [], []
     for valor in request.POST.getlist('usuarios'):
-        if valor.isdigit() and int(valor) in permitidos and int(valor) not in selecionados:
-            selecionados.append(int(valor))
+        if not valor.isdigit() or int(valor) not in permitidos or int(valor) in selecionados:
+            continue
+        if int(valor) in em_outro_instrumento:
+            recusados.append(em_outro_instrumento[int(valor)])
+            continue
+        selecionados.append(int(valor))
+    for ei in recusados:
+        nome = ei.usuario.first_name or ei.usuario.username
+        messages.error(request, f'{nome} já está em {ei.instrumento.nome} no culto de {escala.data:%d/%m}. '
+                                f'Tire de lá antes de colocar em {instrumento.nome}.')
 
     ministrante = request.POST.get('ministrante', '')
     ministrante = int(ministrante) if ministrante.isdigit() else None

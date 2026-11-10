@@ -94,14 +94,24 @@
                         <label class="form-label small fw-bold text-secondary" for="buscaMusicaEscala">Música</label>
                         <div class="input-group-modern mb-2">
                             <i class="bi bi-search text-muted"></i>
-                            <input type="search" id="buscaMusicaEscala" placeholder="Digite para buscar..." autocomplete="off" aria-label="Buscar música">
+                            <input type="search" id="buscaMusicaEscala" placeholder="Nome ou trecho da letra..." autocomplete="off" aria-label="Buscar música">
                         </div>
                         <div class="list-group lista-musicas" id="listaMusicas">
                             {% for musica in musicas_disponiveis %}
                             <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2"
-                                    data-id="{{ musica.id }}" data-nome="{{ musica.nome }}" data-tom="{{ musica.tom }}">
+                                    data-id="{{ musica.id }}" data-nome="{{ musica.nome }}" data-tom="{{ musica.tom }}" data-letra="{{ musica.letra }}">
                                 <i class="bi bi-music-note text-success"></i>
-                                <span class="flex-grow-1">{{ musica.nome }}</span>
+                                <span class="flex-grow-1 text-start" style="min-width: 0;">
+                                    <span class="d-block">{{ musica.nome }}</span>
+                                    <small class="d-block text-muted fst-italic trecho-letra" hidden></small>
+                                    {% if musica.vezes_recentes %}
+                                    <small class="{% if musica.vezes_recentes >= 3 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                                        Tocada {{ musica.vezes_recentes }}x nos últimos {{ meses_historico }} meses · última em {{ musica.ultima_vez|date:"d/m" }}
+                                    </small>
+                                    {% else %}
+                                    <small class="text-success">Não tocada nos últimos {{ meses_historico }} meses</small>
+                                    {% endif %}
+                                </span>
                                 {% if musica.tom %}<span class="badge rounded-pill bg-light text-success border">{{ musica.tom }}</span>{% endif %}
                             </button>
                             {% endfor %}
@@ -159,8 +169,29 @@ if (listaMusicas) {
     const musicaId = document.getElementById('musicaId');
     const divTom = document.getElementById('divTom');
     const selectTom = document.getElementById('selectTom');
-    const itens = listaMusicas.querySelectorAll('[data-id]');
-    const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    // Sem acento e minúsculo, 1 caractere para 1 (assim a posição do termo vale também no texto original)
+    const semAcento = t => Array.from(t || '', c => c.normalize('NFD')[0]).join('').toLowerCase();
+    const itens = Array.from(listaMusicas.querySelectorAll('[data-id]')).map(btn => ({
+        btn,
+        nome: semAcento(btn.dataset.nome),
+        letra: btn.dataset.letra || '',
+        letraBusca: semAcento(btn.dataset.letra),
+        trecho: btn.querySelector('.trecho-letra'),
+    }));
+    // Os itens têm a classe d-flex (display:flex !important); para esconder também é preciso !important
+    const mostrar = (el, visivel) => visivel ? el.style.removeProperty('display') : el.style.setProperty('display', 'none', 'important');
+
+    function mostrarTrecho(item, posicao, tamanho) {
+        const ini = Math.max(0, posicao - 30);
+        const fim = Math.min(item.letra.length, posicao + tamanho + 40);
+        const marca = document.createElement('mark');
+        marca.className = 'px-0';
+        marca.textContent = item.letra.slice(posicao, posicao + tamanho);
+        item.trecho.replaceChildren(
+            (ini > 0 ? '…' : '') + item.letra.slice(ini, posicao), marca,
+            item.letra.slice(posicao + tamanho, fim) + (fim < item.letra.length ? '…' : ''));
+        item.trecho.hidden = false;
+    }
 
     const ehMenor = tom => /^[A-G][#b]?m(?!aj)/.test(tom || '');
 
@@ -176,13 +207,23 @@ if (listaMusicas) {
     }
 
     const filtrar = () => {
-        const termo = normalizar(busca.value.trim());
+        const termo = semAcento(busca.value.trim().replace(/\s+/g, ' '));
         let visiveis = 0;
-        itens.forEach(btn => {
-            const mostrar = normalizar(btn.dataset.nome).includes(termo);
-            btn.style.display = mostrar ? '' : 'none';
-            if (mostrar) visiveis++;
+        itens.forEach(item => {
+            const noNome = item.nome.includes(termo);
+            // Na letra só a partir de 3 letras (evita listar tudo ao digitar "a")
+            const posicao = termo.length >= 3 && !noNome ? item.letraBusca.indexOf(termo) : -1;
+            const visivel = noNome || posicao >= 0;
+            mostrar(item.btn, visivel);
+            if (posicao >= 0) mostrarTrecho(item, posicao, termo.length);
+            else item.trecho.hidden = true;
+            item.peloNome = noNome;
+            if (visivel) visiveis++;
         });
+        // Quem tem o termo no nome aparece antes de quem só tem na letra (cada grupo em ordem alfabética)
+        const semResultado = document.getElementById('semMusica');
+        itens.filter(i => i.peloNome).concat(itens.filter(i => !i.peloNome))
+            .forEach(i => listaMusicas.insertBefore(i.btn, semResultado));
         document.getElementById('semMusica').style.display = visiveis ? 'none' : '';
     };
 
@@ -206,10 +247,10 @@ if (listaMusicas) {
     busca.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        const primeira = Array.from(itens).find(b => b.style.display !== 'none');
-        if (primeira) escolher(primeira);
+        const primeira = itens.find(i => i.btn.style.display !== 'none');
+        if (primeira) escolher(primeira.btn);
     });
-    itens.forEach(btn => btn.addEventListener('click', () => escolher(btn)));
+    itens.forEach(item => item.btn.addEventListener('click', () => escolher(item.btn)));
     document.getElementById('trocarMusica').addEventListener('click', () => { limparEscolha(); busca.focus(); });
 
     listaMusicas.closest('form').addEventListener('submit', e => {

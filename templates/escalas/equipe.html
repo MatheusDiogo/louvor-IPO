@@ -218,6 +218,10 @@ function editarCelula(btn) {
         cb.type = 'checkbox'; cb.name = 'usuarios'; cb.value = id; cb.checked = marcado;
         cb.className = 'form-check-input m-0 flex-shrink-0';
 
+        // Já escalado em outro instrumento neste culto? (uma pessoa por instrumento por culto)
+        const ocupado = (dadosEscala.ocupados[escalaId] || {})[id];
+        const emOutro = ocupado && String(ocupado[0]) !== String(instId) ? ocupado[1] : '';
+
         const nome = document.createElement('span');
         nome.className = 'flex-grow-1';
         nome.textContent = m.nome;
@@ -225,6 +229,18 @@ function editarCelula(btn) {
         info.className = 'd-block ' + (vezes >= dadosEscala.limite ? 'text-danger fw-semibold' : 'text-muted');
         info.textContent = vezes ? `${vezes}x no mês` : 'Nenhuma vez no mês';
         nome.append(info);
+        if (emOutro) {
+            const aviso = document.createElement('small');
+            aviso.className = 'd-block text-warning-emphasis fw-semibold';
+            aviso.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>';
+            aviso.append(marcado ? `Também está em ${emOutro}: tire de um dos dois` : `Já está em ${emOutro} neste culto`);
+            nome.append(aviso);
+            if (!marcado) {
+                cb.disabled = true;
+                linha.classList.add('opacity-50');
+                rotulo.style.cursor = 'not-allowed';
+            }
+        }
 
         const estrela = document.createElement('input');
         estrela.type = 'checkbox'; estrela.name = 'ministrante'; estrela.value = id;

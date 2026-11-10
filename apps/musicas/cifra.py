@@ -192,6 +192,18 @@ def ler_chordpro(texto):
     return cifra
 
 
+def letra_para_busca(texto, limite=4000):
+    """Só a letra da música (sem acordes, diretivas e comentários), numa linha, para buscas."""
+    partes = []
+    for linha in (texto or '').splitlines():
+        if DIRETIVA_RE.match(linha) or linha.lstrip().startswith('#'):
+            continue
+        letra = re.sub(r'\[[^\]]*\]', '', linha).strip()
+        if letra:
+            partes.append(letra)
+    return re.sub(r'\s+', ' ', ' '.join(partes))[:limite]
+
+
 def extrair_metadados(texto):
     """Tira {title} e {key} do texto (eles viram campos da música). Devolve (texto, titulo, tom)."""
     titulo = tom = ''

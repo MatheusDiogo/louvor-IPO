@@ -6,7 +6,7 @@
         <h2 class="page-title">
             Bem-vindo(a), {{ user.first_name|default:user.username }}
         </h2>
-        <p class="page-subtitle">Gerenciamento de Escalas e Músicas.</p>
+        <p class="page-subtitle">Gerenciamento de Escalas e Músicas. <a href="{% url 'ajuda' %}" class="text-success text-decoration-none"><i class="bi bi-question-circle"></i> Como usar</a></p>
     </div>
 
     {% if proximo_culto %}

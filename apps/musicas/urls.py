@@ -1,5 +1,5 @@
 from django.urls import path
-from . import importacao, views
+from . import importacao, relatorio, views
 
 urlpatterns = [
     path('', views.musicas_view, name='musicas'),
@@ -10,6 +10,7 @@ urlpatterns = [
     path('excluir/<int:id>/', views.excluir_musica, name='excluir_musica'),
     path('previa/', views.musica_previa, name='musica_previa'),
     path('converter/', views.musica_converter, name='musica_converter'),
+    path('relatorio/', relatorio.relatorio_musicas, name='relatorio_musicas'),
 
     # Importação do caderno de cifras em PDF
     path('importar/', importacao.importar_pdf, name='importar_pdf'),

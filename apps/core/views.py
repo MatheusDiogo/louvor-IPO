@@ -40,6 +40,11 @@ def login_view(request):
     return render(request, "login.html", {"erro": erro, "email": email, "next": proximo})
 
 
+def ajuda(request):
+    """Guia de uso do site (a parte dos líderes só aparece para líderes)."""
+    return render(request, "ajuda.html")
+
+
 @login_required
 def home(request):
     from django.utils import timezone

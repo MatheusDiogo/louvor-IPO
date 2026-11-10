@@ -9,7 +9,7 @@ from apps.core.decorators import requer_lider
 from apps.core.utils import chave_alfabetica
 from .cifra import (
     converter_cifra_comum, extrair_metadados, normalizar_tom, opcoes_de_tom,
-    parece_chordpro, renderizar_html, tom_base,
+    letra_para_busca, parece_chordpro, renderizar_html, tom_base,
 )
 from .cifra_pdf import gerar_pdf
 from .models import Musica
@@ -24,6 +24,8 @@ def _tom_pedido(request, musica):
 @login_required
 def musicas_view(request):
     musicas = sorted(Musica.objects.all(), key=lambda m: chave_alfabetica(m.nome))
+    for musica in musicas:
+        musica.letra = letra_para_busca(musica.cifra)
     a_revisar = sum(1 for m in musicas if m.revisar)
     return render(request, "musicas.html", {"musicas": musicas, "a_revisar": a_revisar})
 

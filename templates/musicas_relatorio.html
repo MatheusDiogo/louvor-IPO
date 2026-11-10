@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de músicas | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'musicas' %}" class="text-success text-decoration-none">Músicas</a></li>
+            <li class="breadcrumb-item active">Relatório</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Músicas tocadas</h2>
+            <p class="page-subtitle">Quantas vezes cada música entrou nos cultos do período.</p>
+        </div>
+    </div>
+
+    <form method="get" class="table-card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold text-secondary" for="inicio">Data inicial</label>
+                <input type="date" name="inicio" id="inicio" value="{{ inicio|date:'Y-m-d' }}" class="form-control" style="border-radius: 12px;" required>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold text-secondary" for="fim">Data final</label>
+                <input type="date" name="fim" id="fim" value="{{ fim|date:'Y-m-d' }}" class="form-control" style="border-radius: 12px;" required>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="form-check form-switch mb-md-2">
+                    <input class="form-check-input" type="checkbox" role="switch" name="todas" value="1" id="todas" {% if todas %}checked{% endif %}>
+                    <label class="form-check-label small" for="todas">Incluir músicas não tocadas</label>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <button type="submit" class="btn btn-outline-success rounded-pill w-100 py-2"><i class="bi bi-funnel me-1"></i>Gerar</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">{{ cultos }} culto{{ cultos|pluralize }}</span>
+        <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2">{{ total_execucoes }} execuç{{ total_execucoes|pluralize:"ão,ões" }}</span>
+        <div class="ms-auto d-flex gap-2">
+            <a href="?{{ consulta }}{% if consulta %}&amp;{% endif %}formato=pdf" target="_blank" rel="noopener" class="btn btn-sm btn-success rounded-pill px-3">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </a>
+            <a href="?{{ consulta }}{% if consulta %}&amp;{% endif %}formato=csv" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Planilha
+            </a>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <ul class="list-group list-group-flush">
+            {% for linha in linhas %}
+            <li class="list-group-item px-3 py-2">
+                <div class="d-flex align-items-center gap-2 gap-md-3">
+                    <span class="text-muted small" style="width: 1.8rem;">{{ forloop.counter }}</span>
+                    <div class="flex-grow-1 text-break-word" style="min-width: 0;">
+                        <a href="{% url 'detalhes_musica' linha.musica.pk %}" class="fw-medium text-dark text-decoration-none">{{ linha.musica.nome }}</a>
+                        <span class="d-block small text-muted">{% if linha.ultima %}Última vez: {{ linha.ultima|date:"d/m/Y" }}{% else %}Não tocada no período{% endif %}</span>
+                        {% if maximo %}
+                        <div class="progress mt-1" style="height: 4px;" role="presentation">
+                            <div class="progress-bar bg-success" style="width: {% widthratio linha.vezes maximo 100 %}%"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <span class="badge rounded-pill {% if linha.vezes %}bg-success{% else %}bg-light text-muted border{% endif %} px-3 py-2 flex-shrink-0">{{ linha.vezes }}x</span>
+                </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-center py-5 text-muted">
+                <i class="bi bi-bar-chart d-block fs-2 mb-2 opacity-50"></i>
+                Nenhuma música tocada entre {{ inicio|date:"d/m/Y" }} e {{ fim|date:"d/m/Y" }}.
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

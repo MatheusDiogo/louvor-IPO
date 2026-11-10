@@ -7,13 +7,15 @@ from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from collections import defaultdict
 
-from django.db.models import Count
+from django.db.models import Count, Max
 from .models import Escala, EscalaMusica, EscalaIntegrante
-from apps.musicas.cifra import TONS_MAIORES, TONS_MENORES, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base
+from apps.musicas.cifra import (
+    TONS_MAIORES, TONS_MENORES, letra_para_busca, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base,
+)
 from apps.musicas.cifra_pdf import gerar_pdf
 from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
-from apps.core.utils import chave_alfabetica
+from apps.core.utils import chave_alfabetica, subtrair_meses
 
 @login_required
 def escala_list(request):
@@ -104,6 +106,9 @@ def escala_excluir(request, pk):
     return redirect('escala_list')
 
 
+MESES_HISTORICO = 4  # janela usada para "tocada X vezes nos últimos meses"
+
+
 def _tom_valido(valor, musica):
     """Tom escolhido para o culto; se vazio/inválido, usa o tom original da música."""
     return normalizar_tom(valor) if tom_base(valor) else musica.tom
@@ -122,10 +127,24 @@ def escala_detalhe(request, pk):
     na_escala = {item.musica_id for item in itens}
     musicas_disponiveis = sorted(Musica.objects.exclude(id__in=na_escala), key=lambda m: chave_alfabetica(m.nome))
 
+    # Quantas vezes cada música foi tocada nos últimos 4 meses (ajuda a variar o repertório)
+    hoje = timezone.localdate()
+    recentes = {
+        r['musica']: r for r in EscalaMusica.objects
+        .filter(escala__data__range=(subtrair_meses(hoje, MESES_HISTORICO), hoje))
+        .values('musica').annotate(vezes=Count('id'), ultima=Max('escala__data'))
+    }
+    for musica in musicas_disponiveis:
+        dados = recentes.get(musica.id)
+        musica.vezes_recentes = dados['vezes'] if dados else 0
+        musica.ultima_vez = dados['ultima'] if dados else None
+        musica.letra = letra_para_busca(musica.cifra)  # para buscar também pela letra
+
     return render(request, 'escalas/escala_detalhe.html', {
         'escala': escala,
         'itens': itens,
         'musicas_disponiveis': musicas_disponiveis,
+        'meses_historico': MESES_HISTORICO,
         'tons_maiores': TONS_MAIORES,
         'tons_menores': TONS_MENORES,
     })

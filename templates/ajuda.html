@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Ajuda | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4 ajuda">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Como usar o site</h2>
+            <p class="page-subtitle">Guia rápido do Louvor IPO{% if user.is_lider %} para integrantes e líderes{% endif %}.</p>
+        </div>
+    </div>
+
+    <nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Seções da ajuda">
+        <a href="#integrantes" class="btn btn-sm btn-outline-success rounded-pill">Para todos os integrantes</a>
+        {% if user.is_lider %}<a href="#lideres" class="btn btn-sm btn-outline-success rounded-pill">Para líderes</a>{% endif %}
+        <a href="#duvidas" class="btn btn-sm btn-outline-success rounded-pill">Dúvidas frequentes</a>
+    </nav>
+
+    <!-- ================================================================== INTEGRANTES -->
+    <h3 class="h5 fw-bold mb-3" id="integrantes" style="color: var(--primary-green);"><i class="bi bi-people me-2"></i>Para todos os integrantes</h3>
+
+    <div class="accordion mb-4" id="ajudaIntegrantes">
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#a-acesso">
+                <i class="bi bi-door-open me-2 text-success"></i>Criar conta e entrar</button></h4>
+            <div id="a-acesso" class="accordion-collapse collapse show" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <ol>
+                        <li>Na tela de entrada, toque em <strong>Quero me cadastrar</strong>.</li>
+                        <li>Preencha nome, sobrenome, e-mail, uma senha (mínimo 8 caracteres) e marque o que você toca ou canta.</li>
+                        <li>Um líder vai aprovar o seu cadastro. Você recebe um e-mail quando puder entrar.</li>
+                        <li>Para entrar, use o seu <strong>e-mail</strong> e a senha.</li>
+                    </ol>
+                    <p class="mb-1"><strong>Esqueceu a senha?</strong> Toque em <em>Esqueci minha senha</em>, informe o e-mail e siga o link que chegar (confira também o spam).</p>
+                    <p class="mb-0 text-muted small">Se um líder fez o seu cadastro, a senha inicial é <strong>louvoripo</strong>. Troque usando “Esqueci minha senha”.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a-inicio">
+                <i class="bi bi-house me-2 text-success"></i>Tela inicial: “Você está escalado”</button></h4>
+            <div id="a-inicio" class="accordion-collapse collapse" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <p>Quando você estiver escalado, aparece um aviso verde no topo com a data do <strong>próximo culto</strong> e a sua função (ex.: <em>Violão</em>). Se você for o ministrante, aparece <i class="bi bi-star-fill text-warning"></i> <strong>Ministrante</strong>.</p>
+                    <p class="mb-0">Toque no aviso para abrir o culto.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a-culto">
+                <i class="bi bi-calendar-event me-2 text-success"></i>Culto: equipe e músicas do dia</button></h4>
+            <div id="a-culto" class="accordion-collapse collapse" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <p>Em <strong>Culto</strong> ficam os próximos cultos. Nos cultos em que você está escalado aparece o selo <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle">Você está escalado</span>.</p>
+                    <p>Toque em <strong>Ver</strong> para abrir o culto e ver:</p>
+                    <ul>
+                        <li><strong>Equipe</strong>: quem toca e canta em cada instrumento. A <i class="bi bi-star-fill text-warning"></i> marca o ministrante.</li>
+                        <li><strong>Músicas</strong>: o repertório e o tom de cada música.</li>
+                        <li><strong>Todas as cifras</strong>: as cifras do culto, uma depois da outra, <strong>já no tom do culto</strong>. Use os botões com o nome das músicas para pular entre elas. É a melhor tela para tocar pelo celular.</li>
+                        <li><strong>PDF do culto</strong>: todo o repertório em PDF, para salvar ou imprimir.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a-musicas">
+                <i class="bi bi-music-note-list me-2 text-success"></i>Músicas: buscar e ler a cifra</button></h4>
+            <div id="a-musicas" class="accordion-collapse collapse" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <p>Em <strong>Músicas</strong> está todo o repertório. A busca encontra a música pelo <strong>nome ou por um trecho da letra</strong> (não precisa de acentos).</p>
+                    <p class="mb-2">Ao abrir uma música, a barra de cima tem:</p>
+                    <ul class="mb-0">
+                        <li><strong>Tom</strong>: escolha outro tom e a cifra inteira muda na hora.</li>
+                        <li><strong>A− / A+</strong>: diminui ou aumenta a letra. O tamanho fica guardado no seu celular.</li>
+                        <li><i class="bi bi-music-note-beamed"></i> <strong>Acordes</strong>: esconde os acordes e deixa só a letra (bom para quem canta).</li>
+                        <li><i class="bi bi-brightness-high"></i> <strong>Tela acesa</strong>: impede que a tela do celular apague enquanto você toca.</li>
+                        <li><i class="bi bi-file-earmark-pdf"></i> <strong>PDF</strong>: baixa a cifra no tom escolhido.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a-celular">
+                <i class="bi bi-phone me-2 text-success"></i>Deixar o site como app no celular</button></h4>
+            <div id="a-celular" class="accordion-collapse collapse" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <ul class="mb-0">
+                        <li><strong>Android (Chrome)</strong>: abra o site, toque nos <strong>⋮</strong> e escolha <em>Adicionar à tela inicial</em>.</li>
+                        <li><strong>iPhone (Safari)</strong>: abra o site, toque em <strong>Compartilhar</strong> <i class="bi bi-box-arrow-up"></i> e escolha <em>Adicionar à Tela de Início</em>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.is_lider %}
+    <!-- ================================================================== LÍDERES -->
+    <h3 class="h5 fw-bold mb-3" id="lideres" style="color: var(--primary-green);"><i class="bi bi-person-gear me-2"></i>Para líderes</h3>
+
+    <div class="accordion mb-4" id="ajudaLideres">
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-integrantes">
+                <i class="bi bi-person-check me-2 text-success"></i>Integrantes: aprovar cadastros e definir líderes</button></h4>
+            <div id="l-integrantes" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <ul class="mb-0">
+                        <li>Quando alguém se cadastra, todos os líderes recebem um e-mail e o card <strong>Integrantes</strong> mostra quantos estão <span class="badge bg-danger">pendentes</span>.</li>
+                        <li>Em <strong>Integrantes</strong>, a seção <strong>Aguardando aprovação</strong> tem os botões <strong>Aprovar</strong> e <strong>Recusar</strong> (recusar apaga o cadastro).</li>
+                        <li><strong>Novo Integrante</strong> cadastra alguém direto, com a senha inicial <strong>louvoripo</strong>.</li>
+                        <li>Em <strong>Editar</strong> você ajusta nome, e-mail, instrumentos e liga a chave <strong>Líder</strong>.</li>
+                        <li>Os <strong>instrumentos</strong> marcados no integrante definem em quais colunas da escala ele pode ser colocado.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-instrumentos">
+                <i class="bi bi-boombox me-2 text-success"></i>Instrumentos</button></h4>
+            <div id="l-instrumentos" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <p class="mb-0">Cadastre os instrumentos (Teclado, Violão, Vocal...). O campo <strong>Ordem na escala</strong> define a posição da coluna na tela de Escalas e na imagem exportada (1 = primeira coluna).</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-escalas">
+                <i class="bi bi-calendar3 me-2 text-success"></i>Escalas: montar a escala do mês</button></h4>
+            <div id="l-escalas" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <ol>
+                        <li>Em <strong>Escalas</strong>, use as setas ‹ › para escolher o mês.</li>
+                        <li>Toque em <strong>Adicionar data</strong>. Isso também cria o culto na tela Culto.</li>
+                        <li>Toque numa célula (data × instrumento) e marque quem vai participar. A lista mostra só quem tem aquele instrumento cadastrado e quantas vezes cada um já está no mês.</li>
+                        <li>Toque na <i class="bi bi-star-fill text-warning"></i> ao lado de um nome para definir o <strong>ministrante</strong> do culto (só um por culto).</li>
+                    </ol>
+                    <p class="mb-2">Quem estiver escalado <strong>3 vezes ou mais no mês</strong> fica em <span class="text-danger fw-semibold">vermelho</span>, e o aviso no topo lista essas pessoas.</p>
+                    <p class="mb-0"><strong>Exportar</strong>: escolha o período e toque em <strong>Baixar imagem</strong> (ou <strong>Compartilhar</strong> no celular) para mandar a escala no grupo. O ministrante aparece com <strong>*</strong>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-culto">
+                <i class="bi bi-music-note-beamed me-2 text-success"></i>Culto: escolher as músicas e os tons</button></h4>
+            <div id="l-culto" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <ol>
+                        <li>Em <strong>Culto</strong>, toque em <strong>Músicas</strong> no culto desejado (ou crie um com <strong>Novo Culto</strong>).</li>
+                        <li>Toque em <strong>Adicionar Música</strong>, digite parte do nome e escolha a música.</li>
+                        <li>Escolha o <strong>tom do culto</strong>. Todos verão a cifra já transposta.</li>
+                    </ol>
+                    <p class="mb-2">Na lista de músicas aparece quantas vezes cada uma foi <strong>tocada nos últimos 4 meses</strong> e a data da última vez. Em vermelho, as que já foram tocadas 3 vezes ou mais. Isso ajuda a variar o repertório.</p>
+                    <p class="mb-0">Depois de adicionada, dá para trocar o tom pelo seletor ao lado de cada música, ou remover com <i class="bi bi-trash"></i>. O lápis <i class="bi bi-pencil"></i> no card do culto muda a data e a observação.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-cifras">
+                <i class="bi bi-pencil-square me-2 text-success"></i>Cadastrar e editar cifras</button></h4>
+            <div id="l-cifras" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <p>Em <strong>Músicas → Nova Música</strong> (ou no lápis de uma música) abre o editor. Preencha o nome, o <strong>tom original</strong> e a cifra. A pré-visualização mostra como vai ficar.</p>
+                    <p class="mb-2"><strong>Jeito mais fácil:</strong> copie a cifra do Cifra Club, do Word ou do WhatsApp (com os acordes na linha de cima da letra) e <strong>cole no editor</strong>. Ela é convertida automaticamente. Confira se os acordes ficaram na sílaba certa.</p>
+                    <p class="mb-2">O site usa o formato <strong>ChordPro</strong>, em que o acorde fica entre colchetes, colado na sílaba:</p>
+<pre class="bg-light rounded p-2 small mb-2" style="white-space: pre-wrap;">{comment: Intro: E A9 B}
+O [E]Verbo virou [E/G#]gente
+
+{start_of_chorus}
+E [A]vimos sua [E/G#]glória
+{end_of_chorus}</pre>
+                    <ul class="mb-0">
+                        <li><strong>[ ] Acorde</strong> insere colchetes no cursor.</li>
+                        <li><strong>Refrão</strong> marca o trecho selecionado como refrão (ele aparece destacado).</li>
+                        <li><strong>Anotação</strong> serve para “Intro”, “Final”, “2x”... Acordes dentro dela também mudam de tom.</li>
+                        <li>Escreva a cifra <strong>sempre no tom original</strong>. O site faz a troca de tom.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-importar">
+                <i class="bi bi-file-earmark-arrow-up me-2 text-success"></i>Importar o caderno de cifras (PDF)</button></h4>
+            <div id="l-importar" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <ol>
+                        <li>Em <strong>Músicas → Importar PDF</strong>, envie o caderno de cifras.</li>
+                        <li>Confira a lista: cada música aparece como <strong>Nova</strong>, <strong>Já cadastrada</strong> (a cifra será substituída) ou <strong>Repetida</strong> no PDF. Corrija o tom se precisar e use <i class="bi bi-eye"></i> para ver como ficou.</li>
+                        <li>Toque em <strong>Importar</strong>.</li>
+                    </ol>
+                    <p class="mb-2">O PDF precisa ter o título numerado em destaque (“12. Salmo 63”), a linha “Tom: G” logo abaixo e os acordes acima da letra. O refrão em itálico é reconhecido.</p>
+                    <p class="mb-0">As músicas importadas ficam com a etiqueta <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle">Revisar</span> (só líderes veem). Abra no editor, ajuste o que precisar e salve: a etiqueta some. O botão <strong>A revisar</strong> na lista filtra só essas.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-relatorio">
+                <i class="bi bi-bar-chart me-2 text-success"></i>Relatório de músicas tocadas</button></h4>
+            <div id="l-relatorio" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
+                <div class="accordion-body">
+                    <p class="mb-0">Em <strong>Músicas → Relatório</strong>, escolha a data inicial e final e toque em <strong>Gerar</strong>. Aparece quantas vezes cada música foi tocada e quando foi a última vez. Marque <em>Incluir músicas não tocadas</em> para ver também as que ficaram de fora. Baixe em <strong>PDF</strong> ou em <strong>Planilha</strong> (abre no Excel).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================== DÚVIDAS -->
+    <h3 class="h5 fw-bold mb-3" id="duvidas" style="color: var(--primary-green);"><i class="bi bi-question-circle me-2"></i>Dúvidas frequentes</h3>
+
+    <div class="accordion mb-4" id="ajudaDuvidas">
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-pendente">
+                Fiz o cadastro e não consigo entrar</button></h4>
+            <div id="d-pendente" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
+                <div class="accordion-body">Se aparecer “Seu cadastro ainda aguarda aprovação de um líder”, é só esperar a aprovação. Se o problema continuar, fale com um líder do louvor.</div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-email">
+                Não recebi o e-mail de recuperação de senha</button></h4>
+            <div id="d-email" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
+                <div class="accordion-body">Confira a caixa de spam e se digitou o mesmo e-mail do cadastro. O link vale por tempo limitado; se expirar, peça um novo.</div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-tela">
+                O botão “Tela acesa” não aparece</button></h4>
+            <div id="d-tela" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
+                <div class="accordion-body">Alguns navegadores (principalmente os mais antigos) não permitem manter a tela acesa. Atualize o navegador ou use o Chrome/Safari mais recente. Também dá para aumentar o tempo de bloqueio da tela nas configurações do celular.</div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-acorde">
+                Encontrei um acorde errado ou fora do lugar</button></h4>
+            <div id="d-acorde" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
+                <div class="accordion-body">Avise um líder do louvor{% if user.is_lider %}, ou corrija no editor da música (lápis <i class="bi bi-pencil"></i>){% endif %}. A correção vale para todos os tons e todos os cultos.</div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-escala">
+                Não posso tocar num culto em que fui escalado</button></h4>
+            <div id="d-escala" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
+                <div class="accordion-body">Avise um líder do louvor o quanto antes para que a escala seja ajustada.</div>
+            </div>
+        </div>
+    </div>
+
+    {% if not user.is_authenticated %}
+    <a href="{% url 'login' %}" class="btn-login btn-acao"><i class="bi bi-box-arrow-in-right me-2"></i>Ir para a entrada</a>
+    {% endif %}
+</div>
+{% endblock %}

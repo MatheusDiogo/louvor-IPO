@@ -676,3 +676,49 @@ textarea.editor-cifra {
         white-space: pre-wrap;
     }
 }
+
+/* Chaves e caixas de marcar no verde do site */
+.form-check-input:checked {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+.form-check-input:focus {
+    border-color: #86efac;
+    box-shadow: 0 0 0 0.2rem rgba(22, 101, 52, 0.2);
+}
+
+/* Página de ajuda */
+.ajuda .accordion-item {
+    border-color: var(--border-color);
+}
+
+.ajuda .accordion-item:first-of-type,
+.ajuda .accordion-item:first-of-type > .accordion-header .accordion-button {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.ajuda .accordion-item:last-of-type,
+.ajuda .accordion-item:last-of-type > .accordion-header .accordion-button.collapsed {
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+
+.ajuda .accordion-button {
+    font-weight: 600;
+}
+
+.ajuda .accordion-button:not(.collapsed) {
+    color: var(--primary-green);
+    background: var(--bg-light);
+    box-shadow: none;
+}
+
+.ajuda .accordion-button:focus {
+    box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.15);
+}
+
+.ajuda .accordion-body li {
+    margin-bottom: 0.35rem;
+}
