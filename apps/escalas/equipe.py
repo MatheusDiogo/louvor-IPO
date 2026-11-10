@@ -191,7 +191,7 @@ def escala_equipe_celula(request, pk):
     instrumento = get_object_or_404(Instrumento, pk=request.POST.get('instrumento_id'))
 
     # Só aceita quem tem o instrumento cadastrado
-    permitidos = set(instrumento.musicos.values_list('id', flat=True))
+    permitidos = set(instrumento.musicos.filter(is_active=True).values_list('id', flat=True))
     selecionados = []
     for valor in request.POST.getlist('usuarios'):
         if valor.isdigit() and int(valor) in permitidos and int(valor) not in selecionados:

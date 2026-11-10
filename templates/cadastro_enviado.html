@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#166534">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Cadastro Enviado | Louvor IPO</title>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>LOUVOR <span style="font-weight: 300; color: #1a2e1a;">IPO</span></h2>
+            </div>
+            <div style="text-align: center; padding: 8px 0 16px;">
+                <i class="bi bi-hourglass-split" style="font-size: 2.5rem; color: var(--primary-green);"></i>
+                <p style="margin: 12px 0 4px; font-weight: 600; color: #1a2e1a;">Cadastro enviado{% if nome %}, {{ nome }}{% endif %}!</p>
+                <p style="margin: 0; color: #444;">Agora é só aguardar a aprovação de um líder do louvor. Você receberá um e-mail quando puder entrar.</p>
+            </div>
+            <a href="{% url 'login' %}" class="btn-login">Voltar ao login</a>
+        </div>
+    </div>
+</body>
+</html>

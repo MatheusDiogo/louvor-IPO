@@ -45,6 +45,10 @@
                 <button type="submit" class="btn-login">Entrar</button>
                 <a href="{% url 'password_reset' %}" class="login-link">Esqueci minha senha</a>
             </form>
+            <div class="login-divisor"><span>ou</span></div>
+            <a href="{% url 'cadastro' %}" class="btn-secundario">
+                <i class="bi bi-person-plus"></i> Quero me cadastrar
+            </a>
         </div>
     </div>
     <script src="{% static 'js/script.js' %}"></script>

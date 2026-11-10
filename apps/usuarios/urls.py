@@ -6,6 +6,8 @@ urlpatterns = [
     path('', views.integrantes_view, name='integrantes'),
     path('salvar/', views.salvar_integrante, name='salvar_integrante'),
     path('excluir/<int:id>/', views.excluir_integrante, name='excluir_integrante'),
+    path('aprovar/<int:id>/', views.aprovar_integrante, name='aprovar_integrante'),
+    path('recusar/<int:id>/', views.recusar_integrante, name='recusar_integrante'),
     path('accounts/password_reset/', 
         auth_views.PasswordResetView.as_view(
             template_name='password_reset.html',
