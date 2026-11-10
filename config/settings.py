@@ -157,10 +157,18 @@ CSRF_TRUSTED_ORIGINS = ['https://louvor-ipo.up.railway.app']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Em produção (Railway bloqueia SMTP) os e-mails saem pelo Google Apps Script.
+APPS_SCRIPT_EMAIL_URL = os.getenv('APPS_SCRIPT_EMAIL_URL')
+APPS_SCRIPT_EMAIL_SECRET = os.getenv('APPS_SCRIPT_EMAIL_SECRET')
+if APPS_SCRIPT_EMAIL_URL:
+    EMAIL_BACKEND = 'apps.usuarios.email_backend.AppsScriptEmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+# Evita que o worker do gunicorn trave (e retorne 500) se o envio nao responder
+EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
