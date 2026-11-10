@@ -31,13 +31,19 @@
     </div>
 
     {% for item in itens %}
-    <section class="table-card p-3 p-md-4 mb-3 musica-culto" id="musica-{{ item.pk }}">
+    <section class="table-card p-3 p-md-4 mb-3 musica-culto" id="musica-{{ item.pk }}" data-foco data-foco-titulo="{{ item.musica.nome }}">
         <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
             <div class="text-break-word" style="min-width: 0;">
                 <span class="text-muted small">{{ forloop.counter }} de {{ itens|length }}</span>
                 <h4 class="fw-bold mb-0" style="color: var(--primary-green);">{{ item.musica.nome }}</h4>
             </div>
             <span class="badge rounded-pill bg-success px-3 py-2 fs-6 flex-shrink-0" title="Tom">{{ item.tom|default:"—" }}</span>
+            {% if item.musica.cifra %}
+            <button type="button" class="btn btn-sm btn-outline-success rounded-pill flex-shrink-0 botao-foco" data-cifra="foco"
+                    title="Tela cheia" aria-label="Ver {{ item.musica.nome }} em tela cheia">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+            {% endif %}
         </div>
         {% if item.musica.link_youtube %}
         <a href="{{ item.musica.link_youtube }}" target="_blank" rel="noopener" class="small text-danger text-decoration-none d-inline-block mb-2"><i class="bi bi-youtube me-1"></i>Ouvir no YouTube</a>

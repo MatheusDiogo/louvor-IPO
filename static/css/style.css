@@ -662,6 +662,107 @@ textarea.editor-cifra {
     scroll-margin-top: 120px;
 }
 
+/* ---------- Tela cheia: uma cifra por vez ---------- */
+.foco-cabecalho {
+    display: none;
+}
+
+body.modo-foco {
+    overflow: hidden;
+}
+
+.em-foco {
+    position: fixed !important;
+    inset: 0;
+    z-index: 1080;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 16px 96px !important;
+    background: #fff;
+}
+
+.em-foco .foco-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.em-foco .botao-foco {
+    display: none;
+}
+
+.foco-controles {
+    position: fixed;
+    left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100vw - 16px);
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.foco-controles[hidden] {
+    display: none;
+}
+
+.foco-controles .btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 999px;
+}
+
+.foco-controles .btn[hidden] {
+    display: none;
+}
+
+.foco-controles .btn.ativo {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    color: #fff;
+}
+
+.foco-posicao {
+    min-width: 3.5em;
+    text-align: center;
+}
+
+.foco-posicao:empty,
+.foco-posicao:empty + .btn[hidden] + .foco-separador {
+    display: none;
+}
+
+.foco-separador {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+}
+
+@media (max-width: 400px) {
+    .foco-controles {
+        gap: 3px;
+    }
+
+    .foco-controles .btn {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 8px;
+    }
+}
+
 .nav-pills .nav-link {
     color: var(--primary-green);
     border-radius: 999px;
