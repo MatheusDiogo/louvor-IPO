@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if musica.pk %}Editar {{ musica.nome }}{% else %}Nova música{% endif %} | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'musicas' %}" class="text-success text-decoration-none">Músicas</a></li>
+            {% if musica.pk %}<li class="breadcrumb-item text-truncate" style="max-width: 40vw;"><a href="{% url 'detalhes_musica' musica.pk %}" class="text-success text-decoration-none">{{ musica.nome }}</a></li>{% endif %}
+            <li class="breadcrumb-item active">{% if musica.pk %}Editar{% else %}Nova{% endif %}</li>
+        </ol>
+    </nav>
+
+    <form method="post" id="formMusica">
+        {% csrf_token %}
+        <div class="table-card p-3 mb-3">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold text-secondary" for="campoNome">Nome</label>
+                    <input type="text" name="nome" id="campoNome" value="{{ musica.nome }}" class="form-control" style="border-radius: 12px;" maxlength="200" required>
+                </div>
+                <div class="col-5 col-md-2">
+                    <label class="form-label small fw-bold text-secondary" for="campoTom">Tom original</label>
+                    <select name="tom" id="campoTom" class="form-select" style="border-radius: 12px;">
+                        <option value="">—</option>
+                        {% if musica.tom and musica.tom not in opcoes_tom %}<option value="{{ musica.tom }}" selected>{{ musica.tom }}</option>{% endif %}
+                        {% for opcao in opcoes_tom %}<option value="{{ opcao }}" {% if opcao == musica.tom %}selected{% endif %}>{{ opcao }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-7 col-md-4">
+                    <label class="form-label small fw-bold text-secondary" for="campoYoutube">YouTube <span class="fw-normal">(opcional)</span></label>
+                    <input type="url" name="link_youtube" id="campoYoutube" value="{{ musica.link_youtube|default:'' }}" class="form-control" style="border-radius: 12px;" inputmode="url" autocapitalize="none" placeholder="https://youtube.com/...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Abas no celular -->
+        <ul class="nav nav-pills mb-2 d-lg-none" role="tablist">
+            <li class="nav-item"><button type="button" class="nav-link active" data-aba="editar">Editar</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-aba="ver">Pré-visualizar</button></li>
+        </ul>
+
+        <div class="row g-3">
+            <div class="col-lg-6" id="painelEditar">
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="acorde" title="Inserir acorde no cursor">[ ] Acorde</button>
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="refrao" title="Marcar o trecho selecionado como refrão">Refrão</button>
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="comentario" title="Anotação (ex.: Intro)">Anotação</button>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill" data-bs-toggle="modal" data-bs-target="#modalColar">
+                        <i class="bi bi-clipboard me-1"></i>Colar cifra comum
+                    </button>
+                    <button type="button" class="btn btn-sm btn-link text-secondary" data-bs-toggle="collapse" data-bs-target="#ajudaChordpro">
+                        <i class="bi bi-question-circle"></i> Ajuda
+                    </button>
+                </div>
+
+                <div class="collapse" id="ajudaChordpro">
+                    <div class="table-card p-3 mb-2 small">
+                        <p class="mb-2">A cifra usa o formato <strong>ChordPro</strong>: o acorde vai entre colchetes, colado na sílaba onde ele entra.</p>
+<pre class="bg-light rounded p-2 mb-2" style="white-space: pre-wrap;">{comment: Intro: E A9 B}
+
+O [E]Verbo virou [E/G#]gente e habi[A9]tou entre [B]nós
+
+{start_of_chorus}
+E [A]vimos sua [E/G#]glória
+{end_of_chorus}</pre>
+                        <ul class="mb-0 ps-3">
+                            <li><code>{start_of_chorus}</code> … <code>{end_of_chorus}</code> marcam o refrão.</li>
+                            <li><code>{comment: texto}</code> é uma anotação; acordes nela também mudam de tom.</li>
+                            <li>Colou do Cifra Club ou do Word (acordes em cima da letra)? Ele converte sozinho.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <textarea name="cifra" id="campoCifra" class="form-control editor-cifra" spellcheck="false" autocapitalize="none"
+                          placeholder="Digite a cifra em ChordPro ou cole a cifra comum (acordes em cima da letra)...">{{ musica.cifra }}</textarea>
+                <div class="small text-muted mt-1" id="avisoConversao" style="display: none;">
+                    <i class="bi bi-magic me-1"></i>Cifra comum convertida para ChordPro. Confira a posição dos acordes.
+                </div>
+            </div>
+
+            <div class="col-lg-6 d-none d-lg-block" id="painelVer">
+                <div class="barra-leitor mb-2">
+                    <span class="small fw-semibold text-secondary">Pré-visualização</span>
+                    {% include "partials/barra_leitor.html" %}
+                </div>
+                <div class="table-card p-3 previa-cifra">
+                    <h4 class="fw-bold mb-1" style="color: var(--primary-green);" id="previaTitulo">{{ musica.nome }}</h4>
+                    <div class="cifra-leitor" id="previaCifra"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+            <a href="{% if musica.pk %}{% url 'detalhes_musica' musica.pk %}{% else %}{% url 'musicas' %}{% endif %}" class="btn btn-light border rounded-pill px-4">Cancelar</a>
+            <button type="submit" class="btn-login btn-acao flex-grow-1 flex-md-grow-0"><i class="bi bi-check-lg me-2"></i>Salvar</button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal: colar cifra comum -->
+<div class="modal fade" id="modalColar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0" style="color: var(--primary-green);"><i class="bi bi-clipboard me-2"></i>Colar cifra comum</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4">
+                <p class="small text-muted">Cole a cifra com os acordes na linha de cima da letra (Cifra Club, Word, WhatsApp...). Ela será convertida e substituirá o texto do editor.</p>
+                <textarea id="textoColado" class="form-control editor-cifra" style="min-height: 40vh;" spellcheck="false"
+                          placeholder="   G         D/F#&#10;Te adorar, te buscar..."></textarea>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-login btn-acao" id="btnConverter">Converter</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/cifra.js' %}"></script>
+<script>
+(function () {
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const campo = document.getElementById('campoCifra');
+    const campoTom = document.getElementById('campoTom');
+    const campoNome = document.getElementById('campoNome');
+    const previa = document.getElementById('previaCifra');
+    let alterado = false;
+
+    const post = (url, dados) => fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf },
+        body: new URLSearchParams(dados),
+    }).then(r => r.json());
+
+    // Pré-visualização ao vivo
+    let espera;
+    function atualizarPrevia() {
+        clearTimeout(espera);
+        espera = setTimeout(() => {
+            post("{% url 'musica_previa' %}", { cifra: campo.value, tom: campoTom.value })
+                .then(d => { previa.innerHTML = d.html; });
+        }, 350);
+    }
+    campo.addEventListener('input', () => { alterado = true; atualizarPrevia(); });
+    campoTom.addEventListener('change', atualizarPrevia);
+    campoNome.addEventListener('input', () => { document.getElementById('previaTitulo').textContent = campoNome.value; });
+    atualizarPrevia();
+
+    // Conversão de "cifra comum" (acordes em cima da letra)
+    function aplicarConversao(d, substituir, textoOriginal) {
+        if (substituir) {
+            campo.value = d.cifra;
+        } else {
+            const ini = campo.selectionStart, fim = campo.selectionEnd;
+            campo.value = campo.value.slice(0, ini) + d.cifra + campo.value.slice(fim);
+            campo.selectionStart = campo.selectionEnd = ini + d.cifra.length;
+        }
+        if (d.tom && !campoTom.value) {
+            const opcao = Array.from(campoTom.options).find(o => o.value.toLowerCase() === d.tom.toLowerCase());
+            if (opcao) campoTom.value = opcao.value;
+        }
+        document.getElementById('avisoConversao').style.display = '';
+        alterado = true;
+        atualizarPrevia();
+    }
+
+    document.getElementById('btnConverter').addEventListener('click', () => {
+        const texto = document.getElementById('textoColado').value;
+        if (!texto.trim()) return;
+        if (campo.value.trim() && !confirm('Substituir o texto atual do editor pela cifra convertida?')) return;
+        post("{% url 'musica_converter' %}", { texto }).then(d => {
+            aplicarConversao(d, true);
+            bootstrap.Modal.getInstance(document.getElementById('modalColar')).hide();
+            document.getElementById('textoColado').value = '';
+        });
+    });
+
+    // Colar direto no editor: se for cifra comum, converte automaticamente
+    campo.addEventListener('paste', e => {
+        const texto = (e.clipboardData || window.clipboardData).getData('text');
+        if (!texto || !texto.includes('\n')) return;
+        e.preventDefault();
+        post("{% url 'musica_converter' %}", { texto }).then(d => {
+            if (d.ja_era_chordpro) {
+                aplicarConversao({ cifra: texto }, false);
+                document.getElementById('avisoConversao').style.display = 'none';
+            } else {
+                aplicarConversao(d, false);
+            }
+        });
+    });
+
+    // Botões de inserção
+    document.querySelectorAll('[data-inserir]').forEach(botao => botao.addEventListener('click', () => {
+        const ini = campo.selectionStart, fim = campo.selectionEnd;
+        const selecionado = campo.value.slice(ini, fim);
+        let texto, cursor;
+        if (botao.dataset.inserir === 'acorde') {
+            texto = `[${selecionado}]`; cursor = ini + 1 + selecionado.length;
+        } else if (botao.dataset.inserir === 'refrao') {
+            texto = `{start_of_chorus}\n${selecionado || ''}\n{end_of_chorus}`; cursor = ini + 18 + selecionado.length;
+        } else {
+            texto = `{comment: ${selecionado}}`; cursor = ini + 10 + selecionado.length;
+        }
+        campo.value = campo.value.slice(0, ini) + texto + campo.value.slice(fim);
+        campo.focus();
+        campo.selectionStart = campo.selectionEnd = cursor;
+        alterado = true;
+        atualizarPrevia();
+    }));
+
+    // Abas no celular
+    document.querySelectorAll('[data-aba]').forEach(aba => aba.addEventListener('click', () => {
+        const ver = aba.dataset.aba === 'ver';
+        document.querySelectorAll('[data-aba]').forEach(a => a.classList.toggle('active', a === aba));
+        document.getElementById('painelEditar').classList.toggle('d-none', ver);
+        document.getElementById('painelVer').classList.toggle('d-none', !ver);
+        if (ver) atualizarPrevia();
+    }));
+
+    // Aviso ao sair sem salvar
+    window.addEventListener('beforeunload', e => { if (alterado) { e.preventDefault(); e.returnValue = ''; } });
+    document.getElementById('formMusica').addEventListener('submit', () => { alterado = false; });
+})();
+</script>
+{% endblock %}

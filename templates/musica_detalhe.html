@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ musica.nome }} | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'musicas' %}" class="text-success text-decoration-none">Músicas</a></li>
+            <li class="breadcrumb-item active text-truncate" style="max-width: 60vw;">{{ musica.nome }}</li>
+        </ol>
+    </nav>
+
+    <div class="page-header mb-2">
+        <div class="text-break-word">
+            <h2 class="page-title">{{ musica.nome }}</h2>
+            <p class="page-subtitle">
+                {% if musica.tom %}Tom original: <strong>{{ musica.tom }}</strong>{% endif %}
+                {% if musica.link_youtube %}
+                <a href="{{ musica.link_youtube }}" target="_blank" rel="noopener" class="text-danger text-decoration-none ms-2"><i class="bi bi-youtube"></i> YouTube</a>
+                {% endif %}
+            </p>
+        </div>
+        {% if user.is_lider %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'musica_editar' musica.id %}" class="btn btn-outline-success rounded-pill px-3"><i class="bi bi-pencil me-1"></i>Editar</a>
+            <form method="post" action="{% url 'excluir_musica' musica.id %}" class="m-0"
+                  onsubmit="return confirm('Excluir &quot;{{ musica.nome|escapejs }}&quot;? Ela também sai dos cultos em que estiver.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger rounded-pill px-3" aria-label="Excluir música"><i class="bi bi-trash"></i></button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if user.is_lider and musica.revisar %}
+    <div class="alert alert-warning small py-2 rounded-3">
+        <i class="bi bi-exclamation-circle me-1"></i>Cifra importada automaticamente. Confira a posição dos acordes e salve no editor.
+    </div>
+    {% endif %}
+
+    {% if musica.cifra %}
+    <div class="barra-leitor">
+        {% if musica.tom %}
+        <label class="small fw-semibold text-secondary me-1" for="seletorTom">Tom</label>
+        <select id="seletorTom" class="form-select form-select-sm seletor-tom" data-trocar-tom>
+            {% for opcao in opcoes_tom %}<option value="{{ opcao }}" {% if opcao == tom %}selected{% endif %}>{{ opcao }}</option>{% endfor %}
+        </select>
+        {% endif %}
+        {% include "partials/barra_leitor.html" %}
+        <a href="{% url 'musica_pdf' musica.id %}{% if tom %}?tom={{ tom|urlencode }}{% endif %}" target="_blank" rel="noopener"
+           class="btn btn-sm btn-light border ms-auto" title="Baixar PDF">
+            <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-sm-inline ms-1">PDF</span>
+        </a>
+    </div>
+
+    <div class="table-card p-3 p-md-4">
+        <div class="cifra-leitor">{{ cifra_html|safe }}</div>
+    </div>
+    {% else %}
+    <div class="table-card text-center py-5 px-3 text-muted">
+        <i class="bi bi-file-earmark-music fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-0">Esta música ainda não tem cifra.{% if user.is_lider %} <a href="{% url 'musica_editar' musica.id %}" class="text-success">Escrever agora</a>{% endif %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/cifra.js' %}"></script>
+{% endblock %}

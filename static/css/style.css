@@ -507,3 +507,172 @@ button, input, select, textarea {
         flex: 1;
     }
 }
+
+/* ---------- Leitor de cifras (ChordPro) ---------- */
+.cifra-leitor {
+    --cifra-escala: 1;
+    font-size: calc(1.05rem * var(--cifra-escala));
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.cp-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 0.15em;
+}
+
+.cp-chunk {
+    display: inline-flex;
+    flex-direction: column;
+}
+
+.cp-chord {
+    color: var(--primary-green);
+    font-weight: 700;
+    font-size: 0.88em;
+    min-height: 1.3em;
+    padding-right: 0.35em;
+    white-space: pre;
+}
+
+.cp-lyric {
+    white-space: pre-wrap;
+}
+
+/* acorde sem letra embaixo (ex.: no fim da linha) continua na altura dos acordes */
+.cp-line:not(.cp-chords-only) .cp-lyric:empty::after {
+    content: "\00a0";
+}
+
+.cp-chords-only .cp-chunk {
+    margin-right: 0.5em;
+}
+
+.cp-lyrics-only {
+    margin-bottom: 0.15em;
+}
+
+.cp-space {
+    height: 0.9em;
+}
+
+.cp-section.cp-chorus {
+    border-left: 3px solid #86efac;
+    padding-left: 0.75em;
+    margin: 0.3em 0;
+}
+
+.cp-section.cp-chorus .cp-lyric {
+    font-style: italic;
+}
+
+.cp-label {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 0.2em;
+}
+
+.cp-comment {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.9em;
+    margin: 0.2em 0;
+}
+
+.cp-chord-inline {
+    color: var(--primary-green);
+    font-weight: 700;
+    font-style: normal;
+}
+
+.cifra-leitor.sem-acordes .cp-chord,
+.cifra-leitor.sem-acordes .cp-chords-only {
+    display: none;
+}
+
+.barra-leitor {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    margin: 0 -4px 12px;
+    background: rgba(240, 253, 244, 0.95);
+    backdrop-filter: blur(6px);
+    border-radius: 14px;
+}
+
+.barra-leitor .btn {
+    border-radius: 999px;
+}
+
+.barra-leitor .btn.ativo {
+    background: var(--primary-green);
+    color: #fff;
+    border-color: var(--primary-green);
+}
+
+.seletor-tom {
+    width: auto;
+    border-radius: 999px;
+    font-weight: 700;
+    color: var(--primary-green);
+}
+
+/* Editor de cifra (textarea.form-control do Bootstrap tem altura mínima própria) */
+textarea.editor-cifra {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 15px;
+    line-height: 1.45;
+    min-height: 55vh;
+    border-radius: 12px;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.previa-cifra {
+    min-height: 55vh;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+/* Navegação entre as músicas do culto */
+.nav-musicas {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+}
+
+.nav-musicas a {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.musica-culto {
+    scroll-margin-top: 120px;
+}
+
+.nav-pills .nav-link {
+    color: var(--primary-green);
+    border-radius: 999px;
+}
+
+.nav-pills .nav-link.active {
+    background: var(--primary-green);
+}
+
+@media (max-width: 991.98px) {
+    textarea.editor-cifra {
+        white-space: pre-wrap;
+    }
+}

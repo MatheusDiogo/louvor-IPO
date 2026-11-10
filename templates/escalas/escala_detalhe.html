@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <!-- Lista de músicas da escala -->
+    <!-- Músicas do culto -->
     <div class="table-card">
         <ul class="list-group list-group-flush">
             {% for item in itens %}
@@ -40,23 +40,23 @@
                 <div class="d-flex align-items-center gap-2 gap-md-3">
                     <span class="text-muted small" style="width: 1.5rem;">{{ forloop.counter }}</span>
                     <div class="flex-grow-1 text-break-word" style="min-width: 0;">
-                        <span class="d-block fw-medium">{{ item.musica.nome }}</span>
-                        <span class="badge rounded-pill bg-light text-success border border-success-subtle mt-1">
-                            <i class="bi bi-music-note"></i> {{ item.tom.tom }}
-                        </span>
-                        {% if item.musica.link_youtube %}
-                        <a href="{{ item.musica.link_youtube }}" target="_blank" rel="noopener" class="text-danger small text-decoration-none ms-2">
-                            <i class="bi bi-youtube"></i> YouTube
-                        </a>
-                        {% endif %}
+                        <a href="{% url 'detalhes_musica' item.musica.pk %}{% if item.tom %}?tom={{ item.tom|urlencode }}{% endif %}" class="d-block fw-medium text-dark text-decoration-none">{{ item.musica.nome }}</a>
+                        {% if not item.musica.cifra %}<span class="small text-danger">Sem cifra cadastrada</span>{% endif %}
+                        {% if item.musica.tom and item.tom != item.musica.tom %}<span class="small text-muted">Original em {{ item.musica.tom }}</span>{% endif %}
                     </div>
-                    <a href="{{ item.tom.pdf.url }}" target="_blank" rel="noopener"
-                       class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0" aria-label="Abrir cifra">
-                        <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline ms-1">PDF</span>
-                    </a>
-                    <form method="post" action="{% url 'escala_musica_excluir' item.pk %}" class="d-inline-flex m-0" onsubmit="return confirm('Remover &quot;{{ item.musica.nome|escapejs }}&quot; desta escala?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3 flex-shrink-0" aria-label="Remover música">
-                        <i class="bi bi-trash"></i><span class="d-none d-md-inline ms-1">Remover</span>
-                    </button></form>
+                    <form method="post" action="{% url 'escala_musica_tom' item.pk %}" class="m-0 flex-shrink-0">
+                        {% csrf_token %}
+                        <select name="tom" class="form-select form-select-sm seletor-tom" onchange="this.form.submit()" aria-label="Tom de {{ item.musica.nome }}">
+                            {% for opcao in item.opcoes_tom %}<option value="{{ opcao }}" {% if opcao == item.tom %}selected{% endif %}>{{ opcao }}</option>{% endfor %}
+                        </select>
+                    </form>
+                    <form method="post" action="{% url 'escala_musica_excluir' item.pk %}" class="m-0 flex-shrink-0"
+                          onsubmit="return confirm('Remover &quot;{{ item.musica.nome|escapejs }}&quot; deste culto?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-2" aria-label="Remover música">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </li>
             {% empty %}
@@ -67,9 +67,12 @@
             {% endfor %}
         </ul>
     </div>
+    {% if itens %}
+    <p class="small text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Troque o tom pelo seletor: a cifra é transposta automaticamente para todos.</p>
+    {% endif %}
 </div>
 
-<!-- Modal: Adicionar Música à Escala -->
+<!-- Modal: Adicionar música ao culto -->
 <div class="modal fade" id="modalAdicionarMusica" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -95,8 +98,11 @@
                         </div>
                         <div class="list-group lista-musicas" id="listaMusicas">
                             {% for musica in musicas_disponiveis %}
-                            <button type="button" class="list-group-item list-group-item-action" data-id="{{ musica.id }}" data-nome="{{ musica.nome }}">
-                                <i class="bi bi-music-note me-2 text-success"></i>{{ musica.nome }}
+                            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                                    data-id="{{ musica.id }}" data-nome="{{ musica.nome }}" data-tom="{{ musica.tom }}">
+                                <i class="bi bi-music-note text-success"></i>
+                                <span class="flex-grow-1">{{ musica.nome }}</span>
+                                {% if musica.tom %}<span class="badge rounded-pill bg-light text-success border">{{ musica.tom }}</span>{% endif %}
                             </button>
                             {% endfor %}
                             <div class="list-group-item text-muted small text-center" id="semMusica" style="display: none;">Nenhuma música encontrada.</div>
@@ -113,16 +119,14 @@
                     </div>
 
                     <div class="mb-3" id="divTom" style="display:none;">
-                        <label class="form-label small fw-bold text-secondary" for="selectTom">Tom / Cifra</label>
-                        <select name="tom_id" id="selectTom" class="form-select" style="border-radius: 15px;">
-                            <option value="">Selecione o tom...</option>
-                        </select>
-                        <small class="text-muted">Apenas tons com PDF disponível são listados.</small>
+                        <label class="form-label small fw-bold text-secondary" for="selectTom">Tom para este culto</label>
+                        <select name="tom" id="selectTom" class="form-select" style="border-radius: 15px;"></select>
+                        <small class="text-muted" id="tomOriginal"></small>
                     </div>
                     {% else %}
                     <div class="text-center py-3 text-muted">
                         <i class="bi bi-emoji-smile d-block fs-2 mb-2 opacity-50"></i>
-                        <p class="small mb-0">Todas as músicas com tom cadastrado já foram adicionadas a esta escala!</p>
+                        <p class="small mb-0">Todas as músicas do repertório já estão neste culto!</p>
                     </div>
                     {% endif %}
                 </div>
@@ -137,6 +141,9 @@
         </div>
     </div>
 </div>
+
+{{ tons_maiores|json_script:"tonsMaiores" }}
+{{ tons_menores|json_script:"tonsMenores" }}
 {% endblock %}
 
 {% block scripts %}
@@ -144,7 +151,8 @@
 const listaMusicas = document.getElementById('listaMusicas');
 
 if (listaMusicas) {
-    const urlTons = "{% url 'api_tons_musica' 0 %}";
+    const tonsMaiores = JSON.parse(document.getElementById('tonsMaiores').textContent);
+    const tonsMenores = JSON.parse(document.getElementById('tonsMenores').textContent);
     const busca = document.getElementById('buscaMusicaEscala');
     const buscaWrap = document.getElementById('buscaWrap');
     const escolhida = document.getElementById('musicaEscolhida');
@@ -154,11 +162,18 @@ if (listaMusicas) {
     const itens = listaMusicas.querySelectorAll('[data-id]');
     const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-    const preencherTons = (texto, tons) => {
-        selectTom.replaceChildren(new Option(texto, ''));
-        (tons || []).forEach(t => selectTom.add(new Option(t.tom, t.id)));
-        if (tons && tons.length === 1) selectTom.value = tons[0].id;
-    };
+    const ehMenor = tom => /^[A-G][#b]?m(?!aj)/.test(tom || '');
+
+    function preencherTons(original) {
+        const base = (original || '').match(/^[A-G][#b]?m?(?!aj)/);
+        const opcoes = original ? (ehMenor(original) ? tonsMenores : tonsMaiores) : tonsMaiores.concat(tonsMenores);
+        selectTom.replaceChildren();
+        if (!original) selectTom.add(new Option('—', ''));
+        if (original && !opcoes.includes(original)) selectTom.add(new Option(original, original));
+        opcoes.forEach(t => selectTom.add(new Option(t, t)));
+        selectTom.value = original || '';
+        document.getElementById('tomOriginal').textContent = original ? `Tom original: ${original}` : 'Esta música não tem tom original cadastrado.';
+    }
 
     const filtrar = () => {
         const termo = normalizar(busca.value.trim());
@@ -173,7 +188,6 @@ if (listaMusicas) {
 
     const limparEscolha = () => {
         musicaId.value = '';
-        selectTom.required = false;
         escolhida.style.display = 'none';
         divTom.style.display = 'none';
         buscaWrap.style.display = '';
@@ -185,16 +199,10 @@ if (listaMusicas) {
         buscaWrap.style.display = 'none';
         escolhida.style.display = '';
         divTom.style.display = 'block';
-        selectTom.required = true;
-        preencherTons('Carregando...');
-        fetch(urlTons.replace('/0/', `/${btn.dataset.id}/`))
-            .then(r => r.json())
-            .then(data => preencherTons('Selecione o tom...', data.tons))
-            .catch(() => preencherTons('Erro ao carregar tons'));
+        preencherTons(btn.dataset.tom);
     };
 
     busca.addEventListener('input', filtrar);
-    // Enter na busca escolhe a primeira música visível em vez de enviar o formulário
     busca.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
@@ -202,26 +210,15 @@ if (listaMusicas) {
         if (primeira) escolher(primeira);
     });
     itens.forEach(btn => btn.addEventListener('click', () => escolher(btn)));
-
-    document.getElementById('trocarMusica').addEventListener('click', () => {
-        limparEscolha();
-        busca.focus();
-    });
+    document.getElementById('trocarMusica').addEventListener('click', () => { limparEscolha(); busca.focus(); });
 
     listaMusicas.closest('form').addEventListener('submit', e => {
-        if (!musicaId.value) {
-            e.preventDefault();
-            busca.focus();
-        }
+        if (!musicaId.value) { e.preventDefault(); busca.focus(); }
     });
 
     const modal = document.getElementById('modalAdicionarMusica');
     modal.addEventListener('shown.bs.modal', () => busca.focus());
-    modal.addEventListener('hidden.bs.modal', () => {
-        limparEscolha();
-        busca.value = '';
-        filtrar();
-    });
+    modal.addEventListener('hidden.bs.modal', () => { limparEscolha(); busca.value = ''; filtrar(); });
 }
 </script>
 {% endblock %}

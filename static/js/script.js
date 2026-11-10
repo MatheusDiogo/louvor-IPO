@@ -33,24 +33,6 @@ function editarInstrumento(btn) {
     abrirModal("modalInstrumento");
 }
 
-/* ---------- Músicas ---------- */
-
-function novaMusica() {
-    document.getElementById("musica_id").value = "";
-    document.getElementById("musica_nome").value = "";
-    document.getElementById("musica_youtube").value = "";
-    document.getElementById("modalMusicaTitulo").innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Música';
-    abrirModal("modalMusica");
-}
-
-function editarMusica(btn) {
-    document.getElementById("musica_id").value = btn.dataset.id;
-    document.getElementById("musica_nome").value = btn.dataset.nome;
-    document.getElementById("musica_youtube").value = btn.dataset.youtube || "";
-    document.getElementById("modalMusicaTitulo").innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Música';
-    abrirModal("modalMusica");
-}
-
 /* ---------- Integrantes ---------- */
 
 function novoIntegrante() {

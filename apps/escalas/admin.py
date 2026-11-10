@@ -5,7 +5,7 @@ from .models import Escala, EscalaMusica, EscalaIntegrante
 class EscalaMusicaInline(admin.TabularInline):
     model = EscalaMusica
     extra = 1
-    autocomplete_fields = ['musica', 'tom']
+    autocomplete_fields = ['musica']
 
 
 class EscalaIntegranteInline(admin.TabularInline):

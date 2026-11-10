@@ -7,149 +7,111 @@
     <div class="page-header">
         <div>
             <h2 class="page-title">Repertório de Músicas</h2>
-            <p class="page-subtitle">{% if user.is_lider %}Gerencie as cifras e links do YouTube.{% else %}Cifras e links do YouTube.{% endif %}</p>
+            <p class="page-subtitle">{{ musicas|length }} música{{ musicas|length|pluralize }} · toque em uma para ver a cifra.</p>
         </div>
 
         {% if user.is_lider %}
-        <button type="button" class="btn-login btn-acao" onclick="novaMusica()">
-            <i class="bi bi-plus-lg me-2"></i>Nova Música
-        </button>
+        <div class="d-flex gap-2 flex-wrap header-actions">
+            <a href="{% url 'importar_pdf' %}" class="btn btn-outline-success rounded-pill px-4 flex-grow-1">
+                <i class="bi bi-file-earmark-arrow-up me-2"></i>Importar PDF
+            </a>
+            <a href="{% url 'musica_nova' %}" class="btn-login btn-acao flex-grow-1">
+                <i class="bi bi-plus-lg me-2"></i>Nova Música
+            </a>
+        </div>
         {% endif %}
     </div>
 
     {% if musicas %}
-    <div class="mb-3">
-        <div class="input-group-modern mb-0 bg-white">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <div class="input-group-modern mb-0 bg-white flex-grow-1">
             <i class="bi bi-search text-muted"></i>
-            <input type="search" id="buscaMusica" placeholder="Buscar música..." aria-label="Buscar música">
+            <input type="search" id="buscaMusica" placeholder="Buscar por nome ou trecho da letra..." aria-label="Buscar música">
         </div>
+        {% if user.is_lider and a_revisar %}
+        <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3" id="filtroRevisar" aria-pressed="false">
+            <i class="bi bi-exclamation-circle me-1"></i>A revisar ({{ a_revisar }})
+        </button>
+        {% endif %}
     </div>
     {% endif %}
 
     <div class="table-card">
-        <div class="table-responsive">
-            <table class="table table-hover table-modern mb-0">
-                <thead>
-                    <tr>
-                        <th class="text-secondary small text-uppercase fw-bold">Título</th>
-                        <th class="text-secondary small text-uppercase fw-bold text-nowrap">Cifras</th>
-                        {% if user.is_lider %}<th class="text-secondary small text-uppercase fw-bold text-end">Ações</th>{% endif %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for musica in musicas %}
-                    <tr data-busca="{{ musica.nome|lower }}">
-                        <td class="fw-medium text-dark">
-                            <div class="d-flex align-items-center">
-                                <div class="card-icon card-icon-sm me-3 d-none d-sm-flex">🎵</div>
-                                <div class="text-break-word">
-                                    <a href="{% url 'detalhes_musica' musica.id %}" class="d-block text-dark text-decoration-none">{{ musica.nome }}</a>
-                                    {% if musica.link_youtube %}
-                                    <a href="{{ musica.link_youtube }}" target="_blank" rel="noopener" class="text-danger small text-decoration-none">
-                                        <i class="bi bi-youtube"></i> YouTube
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <a href="{% url 'detalhes_musica' musica.id %}" class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 text-decoration-none">
-                                <i class="bi bi-music-note"></i> {{ musica.tons.all|length }}<span class="d-none d-md-inline"> ton(s)</span>
-                            </a>
-                        </td>
-                        {% if user.is_lider %}
-                        <td class="text-end">
-                            <div class="d-flex justify-content-end gap-1">
-                                <button type="button"
-                                    class="btn btn-sm btn-outline-success border-0 rounded-pill px-3"
-                                    data-id="{{ musica.id }}" data-nome="{{ musica.nome }}" data-youtube="{{ musica.link_youtube|default:'' }}"
-                                    onclick="editarMusica(this)" aria-label="Editar {{ musica.nome }}">
-                                    <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
-                                </button>
-
-                                <form method="post" action="{% url 'excluir_musica' musica.id %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir esta música e todas as suas cifras?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3" aria-label="Excluir {{ musica.nome }}">
-                                    <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Excluir</span>
-                                </button></form>
-                            </div>
-                        </td>
-                        {% endif %}
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="{% if user.is_lider %}3{% else %}2{% endif %}" class="text-center py-5 text-muted">
-                            <i class="bi bi-search d-block fs-2 mb-2 opacity-50"></i>
-                            Nenhuma música encontrada no repertório.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    <tr id="semResultado" style="display: none;">
-                        <td colspan="{% if user.is_lider %}3{% else %}2{% endif %}" class="text-center py-4 text-muted">Nenhuma música encontrada.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <ul class="list-group list-group-flush">
+            {% for musica in musicas %}
+            <li class="list-group-item px-3 py-2 linha-musica" data-revisar="{{ musica.revisar|yesno:'1,0' }}"
+                data-busca="{{ musica.nome|lower }} {{ musica.cifra|lower|truncatechars:4000 }}">
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{% url 'detalhes_musica' musica.id %}" class="d-flex align-items-center gap-3 flex-grow-1 text-decoration-none text-dark py-1" style="min-width: 0;">
+                        <div class="card-icon card-icon-sm d-none d-sm-flex">🎵</div>
+                        <div class="text-break-word" style="min-width: 0;">
+                            <span class="fw-medium">{{ musica.nome }}</span>
+                            {% if user.is_lider and musica.revisar %}
+                            <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">Revisar</span>
+                            {% endif %}
+                            {% if not musica.cifra %}
+                            <span class="d-block small text-muted">Sem cifra cadastrada</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% if musica.tom %}
+                    <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 flex-shrink-0">{{ musica.tom }}</span>
+                    {% endif %}
+                    {% if musica.link_youtube %}
+                    <a href="{{ musica.link_youtube }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-danger border-0 rounded-pill flex-shrink-0" aria-label="YouTube">
+                        <i class="bi bi-youtube"></i>
+                    </a>
+                    {% endif %}
+                    {% if user.is_lider %}
+                    <a href="{% url 'musica_editar' musica.id %}" class="btn btn-sm btn-outline-success border-0 rounded-pill flex-shrink-0" aria-label="Editar {{ musica.nome }}">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-center py-5 text-muted">
+                <i class="bi bi-music-note-list d-block fs-2 mb-2 opacity-50"></i>
+                Nenhuma música no repertório ainda.
+                {% if user.is_lider %}<br><a href="{% url 'importar_pdf' %}" class="text-success">Importe o caderno de cifras em PDF</a> ou cadastre uma nova.{% endif %}
+            </li>
+            {% endfor %}
+            <li class="list-group-item text-center py-4 text-muted" id="semResultado" style="display: none;">Nenhuma música encontrada.</li>
+        </ul>
     </div>
 </div>
-
-{% if user.is_lider %}
-<div class="modal fade" id="modalMusica" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <form method="post" action="{% url 'salvar_musica' %}">
-                {% csrf_token %}
-                <input type="hidden" name="id" id="musica_id">
-
-                <div class="modal-header border-0 pt-4 px-4">
-                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="modalMusicaTitulo">
-                        <i class="bi bi-music-note-list me-2"></i>Dados da Música
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-
-                <div class="modal-body px-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary" for="musica_nome">Nome da Música</label>
-                        <div class="input-group-modern">
-                            <i class="bi bi-fonts text-muted"></i>
-                            <input type="text" name="nome" id="musica_nome" placeholder="Ex: Grandioso és Tu" maxlength="200" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary" for="musica_youtube">Link do YouTube</label>
-                        <div class="input-group-modern">
-                            <i class="bi bi-youtube text-muted"></i>
-                            <input type="url" name="link_youtube" id="musica_youtube" placeholder="https://youtube.com/..." inputmode="url" autocapitalize="none">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-login btn-acao">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-const busca = document.getElementById('buscaMusica');
-if (busca) {
-    const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    busca.addEventListener('input', () => {
+(function () {
+    const busca = document.getElementById('buscaMusica');
+    if (!busca) return;
+    const botaoRevisar = document.getElementById('filtroRevisar');
+    let soRevisar = false;
+    // Busca no nome e na letra (ignora acentos, acordes [G] e diretivas {..})
+    const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\[[^\]]*\]|\{[^}]*\}/g, '').replace(/\s+/g, ' ').toLowerCase();
+    const linhas = Array.from(document.querySelectorAll('.linha-musica')).map(li => ({ li, texto: normalizar(li.dataset.busca) }));
+
+    function filtrar() {
         const termo = normalizar(busca.value.trim());
         let visiveis = 0;
-        document.querySelectorAll('tr[data-busca]').forEach(tr => {
-            const mostrar = normalizar(tr.dataset.busca).includes(termo);
-            tr.style.display = mostrar ? '' : 'none';
+        linhas.forEach(({ li, texto }) => {
+            const mostrar = texto.includes(termo) && (!soRevisar || li.dataset.revisar === '1');
+            li.style.display = mostrar ? '' : 'none';
             if (mostrar) visiveis++;
         });
         document.getElementById('semResultado').style.display = visiveis ? 'none' : '';
-    });
-}
+    }
+    busca.addEventListener('input', filtrar);
+    if (botaoRevisar) {
+        botaoRevisar.addEventListener('click', () => {
+            soRevisar = !soRevisar;
+            botaoRevisar.classList.toggle('active', soRevisar);
+            botaoRevisar.setAttribute('aria-pressed', soRevisar);
+            filtrar();
+        });
+    }
+})();
 </script>
 {% endblock %}

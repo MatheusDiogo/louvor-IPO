@@ -1,11 +1,18 @@
 from django.urls import path
-from . import views
+from . import importacao, views
 
 urlpatterns = [
     path('', views.musicas_view, name='musicas'),
+    path('nova/', views.musica_editar, name='musica_nova'),
     path('<int:musica_id>/', views.detalhes_musica, name='detalhes_musica'),
-    path('salvar/', views.salvar_musica, name='salvar_musica'),
+    path('<int:musica_id>/editar/', views.musica_editar, name='musica_editar'),
+    path('<int:musica_id>/pdf/', views.musica_pdf, name='musica_pdf'),
     path('excluir/<int:id>/', views.excluir_musica, name='excluir_musica'),
-    path('tom/salvar/', views.salvar_tom, name='salvar_tom'),
-    path('tom/excluir/<int:id>/', views.excluir_tom, name='excluir_tom'),
+    path('previa/', views.musica_previa, name='musica_previa'),
+    path('converter/', views.musica_converter, name='musica_converter'),
+
+    # Importação do caderno de cifras em PDF
+    path('importar/', importacao.importar_pdf, name='importar_pdf'),
+    path('importar/confirmar/', importacao.importar_pdf_confirmar, name='importar_pdf_confirmar'),
+    path('importar/<str:token>/<int:numero>/', importacao.importar_pdf_previa, name='importar_pdf_previa'),
 ]

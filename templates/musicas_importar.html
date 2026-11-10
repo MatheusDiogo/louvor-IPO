@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Importar PDF | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'musicas' %}" class="text-success text-decoration-none">Músicas</a></li>
+            <li class="breadcrumb-item active">Importar PDF</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Importar caderno de cifras</h2>
+            <p class="page-subtitle">Converte as músicas de um PDF para o formato do site (com troca de tom).</p>
+        </div>
+    </div>
+
+    {% if not plano %}
+    <!-- Etapa 1: envio do arquivo -->
+    <form method="post" enctype="multipart/form-data" class="table-card p-3 p-md-4" id="formEnvio">
+        {% csrf_token %}
+        <label class="form-label small fw-bold text-secondary" for="arquivoPdf">Arquivo PDF</label>
+        <input type="file" name="pdf" id="arquivoPdf" class="form-control mb-3" accept="application/pdf" required style="border-radius: 12px;">
+
+        <div class="small text-muted mb-3">
+            <p class="mb-1 fw-semibold">Como o arquivo é lido:</p>
+            <ul class="mb-0 ps-3">
+                <li>Cada música começa com o título numerado em destaque, ex.: <strong>“12. Salmo 63”</strong>, e a linha <strong>“Tom: G”</strong> logo abaixo.</li>
+                <li>Os acordes devem estar na linha de cima da letra; o refrão em <em>itálico</em> é reconhecido.</li>
+                <li>Pode ter duas colunas por página e músicas que continuam na coluna ou página seguinte. O sumário é ignorado.</li>
+                <li>Antes de importar você revisa a lista e vê como cada música ficou.</li>
+            </ul>
+        </div>
+
+        <button type="submit" class="btn-login btn-acao">
+            <i class="bi bi-file-earmark-arrow-up me-2"></i>Ler arquivo
+        </button>
+    </form>
+
+    {% else %}
+    <!-- Etapa 2: revisão -->
+    <div class="table-card p-3 mb-3">
+        <div class="small text-muted mb-2"><i class="bi bi-file-earmark-pdf me-1"></i>{{ nome_arquivo }} · {{ plano|length }} música{{ plano|length|pluralize }} encontrada{{ plano|length|pluralize }}</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge rounded-pill bg-success">{{ resumo.nova }} nova{{ resumo.nova|pluralize }}</span>
+            <span class="badge rounded-pill bg-warning text-dark">{{ resumo.atualizar }} já cadastrada{{ resumo.atualizar|pluralize }} (atualiza)</span>
+            {% if resumo.repetida %}<span class="badge rounded-pill bg-secondary">{{ resumo.repetida }} repetida{{ resumo.repetida|pluralize }} no PDF</span>{% endif %}
+            {% if resumo.avisos %}<span class="badge rounded-pill bg-light text-danger border border-danger-subtle">{{ resumo.avisos }} com aviso{{ resumo.avisos|pluralize }}</span>{% endif %}
+        </div>
+        <p class="small text-muted mb-0 mt-2">As músicas importadas ficam marcadas como <strong>Revisar</strong> até um líder conferir e salvar no editor.</p>
+    </div>
+
+    <form method="post" action="{% url 'importar_pdf_confirmar' %}" id="formConfirmar">
+        {% csrf_token %}
+        <input type="hidden" name="token" value="{{ token }}">
+
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <div class="input-group-modern mb-0 bg-white flex-grow-1" style="min-width: 200px;">
+                <i class="bi bi-search text-muted"></i>
+                <input type="search" id="filtroImport" placeholder="Filtrar..." aria-label="Filtrar músicas">
+            </div>
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" onclick="marcarTodas(true)">Marcar todas</button>
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" onclick="marcarTodas(false)">Desmarcar</button>
+        </div>
+
+        <div class="table-card mb-3">
+            <ul class="list-group list-group-flush">
+                {% for item in plano %}
+                <li class="list-group-item px-3 py-2 linha-import" data-busca="{{ item.numero }} {{ item.titulo|lower }}">
+                    <div class="d-flex align-items-center gap-2 gap-md-3">
+                        <input class="form-check-input m-0 flex-shrink-0 chk-import" type="checkbox" name="numeros" value="{{ item.numero }}"
+                               id="imp_{{ item.numero }}" {% if item.selecionada %}checked{% endif %}>
+                        <label for="imp_{{ item.numero }}" class="flex-grow-1 text-break-word" style="min-width: 0; cursor: pointer;">
+                            <span class="text-muted small">{{ item.numero }}.</span>
+                            <span class="fw-medium">{{ item.titulo }}</span>
+                            <span class="d-block small">
+                                {% if item.situacao == 'nova' %}
+                                <span class="text-success"><i class="bi bi-plus-circle me-1"></i>Nova música</span>
+                                {% elif item.situacao == 'atualizar' %}
+                                <span class="text-warning-emphasis"><i class="bi bi-arrow-repeat me-1"></i>Substitui a cifra de “{{ item.existente }}”</span>
+                                {% else %}
+                                <span class="text-secondary"><i class="bi bi-files me-1"></i>Repetida (igual à nº {{ item.repetida_de }})</span>
+                                {% endif %}
+                                {% for aviso in item.avisos %}<span class="d-block text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ aviso }}</span>{% endfor %}
+                            </span>
+                        </label>
+                        <input type="text" name="tom_{{ item.numero }}" value="{{ item.tom }}" maxlength="10"
+                               class="form-control form-control-sm text-center flex-shrink-0{% if not item.tom %} is-invalid{% endif %}"
+                               placeholder="Tom" aria-label="Tom de {{ item.titulo }}" style="width: 76px; border-radius: 10px;">
+                        <a href="{% url 'importar_pdf_previa' token item.numero %}" target="_blank" rel="noopener"
+                           class="btn btn-sm btn-outline-success rounded-pill flex-shrink-0" title="Ver como ficou" aria-label="Ver conversão de {{ item.titulo }}">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'importar_pdf' %}" class="btn btn-light border rounded-pill px-4">Cancelar</a>
+            <button type="submit" class="btn-login btn-acao flex-grow-1 flex-md-grow-0">
+                <i class="bi bi-check2-all me-2"></i>Importar <span id="qtdSelecionadas"></span>
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+['formEnvio', 'formConfirmar'].forEach(id => {
+    const form = document.getElementById(id);
+    if (!form) return;
+    form.addEventListener('submit', e => {
+        if (id === 'formConfirmar' && !document.querySelector('.chk-import:checked')) {
+            e.preventDefault();
+            alert('Marque pelo menos uma música.');
+            return;
+        }
+        const botao = form.querySelector('button[type="submit"]');
+        botao.disabled = true;
+        botao.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
+    });
+});
+
+const contador = document.getElementById('qtdSelecionadas');
+const atualizarContador = () => {
+    if (contador) contador.textContent = `(${document.querySelectorAll('.chk-import:checked').length})`;
+};
+document.querySelectorAll('.chk-import').forEach(c => c.addEventListener('change', atualizarContador));
+atualizarContador();
+
+function marcarTodas(valor) {
+    document.querySelectorAll('.linha-import').forEach(li => {
+        if (li.style.display !== 'none') li.querySelector('.chk-import').checked = valor;
+    });
+    atualizarContador();
+}
+
+const filtro = document.getElementById('filtroImport');
+if (filtro) {
+    const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    filtro.addEventListener('input', () => {
+        const termo = normalizar(filtro.value.trim());
+        document.querySelectorAll('.linha-import').forEach(li => {
+            li.style.display = normalizar(li.dataset.busca).includes(termo) ? '' : 'none';
+        });
+    });
+}
+</script>
+{% endblock %}

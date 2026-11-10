@@ -1,13 +1,9 @@
 from django.contrib import admin
-from .models import Musica, Tom
+from .models import Musica
+
 
 @admin.register(Musica)
 class MusicaAdmin(admin.ModelAdmin):
-    # Isso permite que a música seja pesquisada em outros formulários
-    search_fields = ['nome'] 
-    list_display = ('nome',)
-
-@admin.register(Tom)
-class TomAdmin(admin.ModelAdmin):
-    search_fields = ['tom']
-    list_display = ('tom',)
+    search_fields = ['nome']
+    list_display = ('nome', 'tom', 'revisar', 'atualizado_em')
+    list_filter = ('revisar',)

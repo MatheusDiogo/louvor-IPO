@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -8,7 +9,9 @@ from collections import defaultdict
 
 from django.db.models import Count
 from .models import Escala, EscalaMusica, EscalaIntegrante
-from apps.musicas.models import Musica, Tom
+from apps.musicas.cifra import TONS_MAIORES, TONS_MENORES, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base
+from apps.musicas.cifra_pdf import gerar_pdf
+from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
 from apps.core.utils import chave_alfabetica
 
@@ -101,81 +104,87 @@ def escala_excluir(request, pk):
     return redirect('escala_list')
 
 
+def _tom_valido(valor, musica):
+    """Tom escolhido para o culto; se vazio/inválido, usa o tom original da música."""
+    return normalizar_tom(valor) if tom_base(valor) else musica.tom
+
+
 @login_required
 @requer_lider
 def escala_detalhe(request, pk):
-    """Detalhe/edição da escala: adicionar músicas com tom."""
+    """Gerenciar as músicas do culto (e o tom de cada uma)."""
     escala = get_object_or_404(Escala, pk=pk)
+    itens = list(escala.itens.select_related('musica').order_by('id'))
+    for item in itens:
+        opcoes = opcoes_de_tom(item.musica.tom)
+        item.opcoes_tom = opcoes if not item.tom or item.tom in opcoes else [item.tom] + opcoes
 
-    # IDs de músicas já adicionadas nessa escala
-    musicas_na_escala_ids = escala.itens.values_list('musica_id', flat=True)
-
-    # Músicas disponíveis (com pelo menos 1 tom cadastrado, ainda não na escala)
-    musicas_disponiveis = Musica.objects.filter(
-        tons__isnull=False
-    ).exclude(
-        id__in=musicas_na_escala_ids
-    ).distinct()
-    musicas_disponiveis = sorted(musicas_disponiveis, key=lambda m: chave_alfabetica(m.nome))
-
-    itens = escala.itens.select_related('musica', 'tom').order_by('id')
+    na_escala = {item.musica_id for item in itens}
+    musicas_disponiveis = sorted(Musica.objects.exclude(id__in=na_escala), key=lambda m: chave_alfabetica(m.nome))
 
     return render(request, 'escalas/escala_detalhe.html', {
         'escala': escala,
         'itens': itens,
         'musicas_disponiveis': musicas_disponiveis,
+        'tons_maiores': TONS_MAIORES,
+        'tons_menores': TONS_MENORES,
     })
 
 
 @login_required
 @requer_lider
+@require_POST
 def escala_musica_adicionar(request, pk):
-    """Adiciona uma música (com tom) à escala."""
+    """Adiciona uma música ao culto, no tom escolhido."""
     escala = get_object_or_404(Escala, pk=pk)
+    musica = get_object_or_404(Musica, pk=request.POST.get('musica_id') or 0)
 
-    if request.method == 'POST':
-        musica_id = request.POST.get('musica_id')
-        tom_id = request.POST.get('tom_id')
-
-        if not musica_id or not tom_id:
-            messages.error(request, 'Selecione a música e o tom.')
-            return redirect('escala_detalhe', pk=pk)
-
-        musica = get_object_or_404(Musica, pk=musica_id)
-        tom = get_object_or_404(Tom, pk=tom_id, musica=musica)
-
-        if EscalaMusica.objects.filter(escala=escala, musica=musica).exists():
-            messages.error(request, f'"{musica.nome}" já está nessa escala.')
-            return redirect('escala_detalhe', pk=pk)
-
-        EscalaMusica.objects.create(escala=escala, musica=musica, tom=tom)
-        messages.success(request, f'"{musica.nome}" adicionada com sucesso!')
-
+    if EscalaMusica.objects.filter(escala=escala, musica=musica).exists():
+        messages.error(request, f'"{musica.nome}" já está neste culto.')
+    else:
+        EscalaMusica.objects.create(escala=escala, musica=musica, tom=_tom_valido(request.POST.get('tom', ''), musica))
+        messages.success(request, f'"{musica.nome}" adicionada!')
     return redirect('escala_detalhe', pk=pk)
 
 
 @login_required
 @requer_lider
 @require_POST
+def escala_musica_tom(request, item_pk):
+    """Troca o tom de uma música no culto."""
+    item = get_object_or_404(EscalaMusica.objects.select_related('musica'), pk=item_pk)
+    item.tom = _tom_valido(request.POST.get('tom', ''), item.musica)
+    item.save(update_fields=['tom'])
+    messages.success(request, f'"{item.musica.nome}" agora em {item.tom or "tom original"}.')
+    return redirect('escala_detalhe', pk=item.escala_id)
+
+
+@login_required
+@requer_lider
+@require_POST
 def escala_musica_excluir(request, item_pk):
-    """Remove uma música da escala."""
+    """Remove uma música do culto."""
     item = get_object_or_404(EscalaMusica, pk=item_pk)
     escala_pk = item.escala.pk
     item.delete()
-    messages.success(request, 'Música removida da escala.')
+    messages.success(request, 'Música removida do culto.')
     return redirect('escala_detalhe', pk=escala_pk)
+
+
+def _equipe(escala):
+    """Equipe do culto agrupada por instrumento, na ordem das colunas da escala."""
+    equipe = defaultdict(list)
+    for ei in escala.integrantes.select_related('instrumento', 'usuario').order_by('instrumento__ordem', 'instrumento__nome', 'pk'):
+        equipe[ei.instrumento].append(ei.usuario)
+    return equipe
 
 
 @login_required
 def escala_visualizar(request, pk):
-    """Visualização pública da escala (somente leitura, para ver PDFs)."""
+    """Visualização do culto (somente leitura): equipe e músicas."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = escala.itens.select_related('musica', 'tom').order_by('id')
-
-    # Equipe do culto agrupada por instrumento, na ordem das colunas da escala
-    equipe = defaultdict(list)
-    for ei in escala.integrantes.select_related('instrumento', 'usuario').order_by('instrumento__ordem', 'instrumento__nome', 'pk'):
-        equipe[ei.instrumento].append(ei.usuario)
+    itens = escala.itens.select_related('musica').order_by('id')
+    equipe = _equipe(escala)
     minhas_funcoes = [inst.nome for inst, usuarios in equipe.items() if request.user in usuarios]
 
     return render(request, 'escalas/escala_visualizar.html', {
@@ -186,11 +195,32 @@ def escala_visualizar(request, pk):
     })
 
 
-# API para buscar tons de uma música via AJAX
-from django.http import JsonResponse
+@login_required
+def escala_cifras(request, pk):
+    """Todas as cifras do culto, uma após a outra, já no tom escolhido (para tocar pelo celular)."""
+    escala = get_object_or_404(Escala, pk=pk)
+    itens = list(escala.itens.select_related('musica').order_by('id'))
+    for item in itens:
+        item.cifra_html = renderizar_html(item.musica.cifra, item.musica.tom, item.tom)
+    return render(request, 'escalas/escala_cifras.html', {'escala': escala, 'itens': itens})
+
 
 @login_required
-def api_tons_musica(request, musica_id):
-    """Retorna os tons disponíveis para uma música em JSON."""
-    tons = Tom.objects.filter(musica_id=musica_id).values('id', 'tom')
-    return JsonResponse({'tons': list(tons)})
+def escala_pdf(request, pk):
+    """PDF com o repertório do culto (cada música no tom escolhido)."""
+    escala = get_object_or_404(Escala, pk=pk)
+    itens = escala.itens.select_related('musica').order_by('id')
+    titulo = f'Culto {escala.data:%d/%m/%Y}'
+    pdf = gerar_pdf([
+        {
+            'nome': f'{indice}. {item.musica.nome}',
+            'cifra': item.musica.cifra,
+            'tom_original': item.musica.tom,
+            'tom': item.tom,
+            'subtitulo': titulo,
+        }
+        for indice, item in enumerate(itens, start=1)
+    ], titulo_documento=titulo)
+    resposta = HttpResponse(pdf, content_type='application/pdf')
+    resposta['Content-Disposition'] = f'inline; filename="culto-{escala.data:%Y-%m-%d}.pdf"'
+    return resposta

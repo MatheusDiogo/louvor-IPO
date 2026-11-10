@@ -19,6 +19,11 @@ urlpatterns = [
     # Músicas na escala
     path('<int:pk>/musica/adicionar/', views.escala_musica_adicionar, name='escala_musica_adicionar'),
     path('musica/<int:item_pk>/excluir/', views.escala_musica_excluir, name='escala_musica_excluir'),
+    path('musica/<int:item_pk>/tom/', views.escala_musica_tom, name='escala_musica_tom'),
+
+    # Cifras do culto (todas no tom escolhido) e PDF do repertório
+    path('<int:pk>/cifras/', views.escala_cifras, name='escala_cifras'),
+    path('<int:pk>/pdf/', views.escala_pdf, name='escala_pdf'),
 
     # Escala de integrantes (somente líderes)
     path('equipe/', equipe.escala_equipe, name='escala_equipe'),
@@ -26,6 +31,4 @@ urlpatterns = [
     path('equipe/<int:pk>/celula/', equipe.escala_equipe_celula, name='escala_equipe_celula'),
     path('equipe/exportar/', equipe.escala_equipe_exportar, name='escala_equipe_exportar'),
 
-    # API AJAX
-    path('api/tons/<int:musica_id>/', views.api_tons_musica, name='api_tons_musica'),
 ]
