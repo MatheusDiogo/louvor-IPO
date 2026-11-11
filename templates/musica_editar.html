@@ -145,7 +145,7 @@ E [A]vimos sua [E/G#]glória
         clearTimeout(espera);
         espera = setTimeout(() => {
             post("{% url 'musica_previa' %}", { cifra: campo.value, tom: campoTom.value })
-                .then(d => { previa.innerHTML = d.html; });
+                .then(d => { previa.innerHTML = d.html; if (window.ajustarCifras) window.ajustarCifras(); });
         }, 350);
     }
     campo.addEventListener('input', () => { alterado = true; atualizarPrevia(); });

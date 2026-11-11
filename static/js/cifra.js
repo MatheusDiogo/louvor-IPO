@@ -5,16 +5,68 @@
     };
     const gravar = (chave, valor) => { try { localStorage.setItem(chave, valor); } catch (e) { /* sem armazenamento */ } };
 
-    let escala = parseFloat(ler('cifra-escala', '1')) || 1;
+    // Tamanho da letra. As linhas com acorde nunca quebram (senão o acorde sai do lugar), então o
+    // tamanho máximo é o maior em que a linha mais comprida da música ainda cabe na tela.
+    // 'max' = sempre usar esse limite (padrão); um número = tamanho escolhido pela pessoa com A−.
+    const ESCALA_MIN = 0.55, ESCALA_MAX = 1.8, PASSO = 0.1;
+    let preferencia = ler('cifra-tamanho', 'max');
     let acordes = ler('cifra-acordes', '1') === '1';
+
+    function limiteSemQuebra(leitor) {
+        leitor.style.setProperty('--cifra-escala', 1);
+        // .medindo deixa cada linha com a largura do próprio conteúdo (e não a da tela)
+        leitor.classList.add('medindo');
+        let maisLarga = 0;
+        leitor.querySelectorAll('.cp-line:not(.cp-lyrics-only)').forEach(linha => {
+            maisLarga = Math.max(maisLarga, linha.getBoundingClientRect().width);
+        });
+        leitor.classList.remove('medindo');
+        if (!maisLarga) return ESCALA_MAX;
+        // a largura da linha cresce na mesma proporção da fonte; folga de 2% para arredondamentos
+        return Math.min(ESCALA_MAX, Math.floor((leitor.clientWidth / maisLarga) * 98) / 100);
+    }
+
+    function leitorDeReferencia() {
+        const visiveis = Array.from(document.querySelectorAll('.cifra-leitor')).filter(el => el.clientWidth > 0);
+        return (focada && focada.querySelector('.cifra-leitor')) || visiveis[0] || null;
+    }
 
     function aplicar() {
         document.querySelectorAll('.cifra-leitor').forEach(el => {
-            el.style.setProperty('--cifra-escala', escala);
             el.classList.toggle('sem-acordes', !acordes);
+            if (!el.clientWidth) return;  // escondido (ex.: aba de pré-visualização fechada)
+            const limite = limiteSemQuebra(el);
+            const desejada = preferencia === 'max' ? limite : parseFloat(preferencia);
+            el.dataset.limite = limite;
+            el.style.setProperty('--cifra-escala', Math.max(ESCALA_MIN, Math.min(desejada, limite)));
+        });
+        const ref = leitorDeReferencia();
+        const noLimite = preferencia === 'max' || (ref && parseFloat(preferencia) >= parseFloat(ref.dataset.limite));
+        document.querySelectorAll('[data-cifra="maior"]').forEach(b => {
+            b.disabled = !!noLimite;
+            b.title = noLimite ? 'Tamanho máximo sem quebrar as linhas' : 'Aumentar letra';
         });
         document.querySelectorAll('[data-cifra="acordes"]').forEach(b => b.classList.toggle('ativo', acordes));
     }
+
+    function mudarTamanho(passo) {
+        const ref = leitorDeReferencia();
+        if (!ref) return;
+        const atual = parseFloat(getComputedStyle(ref).getPropertyValue('--cifra-escala')) || 1;
+        const limite = parseFloat(ref.dataset.limite) || ESCALA_MAX;
+        const nova = +(atual + passo).toFixed(2);
+        preferencia = nova >= limite - 0.001 ? 'max' : String(Math.max(ESCALA_MIN, nova));
+        gravar('cifra-tamanho', preferencia);
+    }
+
+    // Recalcula ao girar o celular / redimensionar e quando as fontes terminam de carregar
+    let esperaRedimensionar;
+    window.addEventListener('resize', () => {
+        clearTimeout(esperaRedimensionar);
+        esperaRedimensionar = setTimeout(aplicar, 150);
+    });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(aplicar);
+    window.ajustarCifras = aplicar;  // usado pela pré-visualização do editor
 
     // Manter a tela acesa (Wake Lock API)
     let trava = null;
@@ -53,14 +105,13 @@
             if (alvo) abrirFoco(alvo, true);
             return;
         }
-        if (acao === 'menor') escala = Math.max(0.7, +(escala - 0.1).toFixed(2));
-        if (acao === 'maior') escala = Math.min(2, +(escala + 0.1).toFixed(2));
+        if (acao === 'menor') mudarTamanho(-PASSO);
+        if (acao === 'maior') mudarTamanho(PASSO);
         if (acao === 'acordes') acordes = !acordes;
         if (acao === 'tela') {
             alternarTela(botao).then(() => gravar('cifra-tela', telaAcesa() ? '1' : '0'));
             return;
         }
-        gravar('cifra-escala', escala);
         gravar('cifra-acordes', acordes ? '1' : '0');
         aplicar();
     });
@@ -128,6 +179,7 @@
         document.body.classList.remove('modo-foco');
         controles.hidden = true;
         if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        aplicar();  // a largura disponível mudou
         secao.scrollIntoView({ block: 'start' });
     }
 

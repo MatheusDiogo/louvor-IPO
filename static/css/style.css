@@ -514,11 +514,16 @@ button, input, select, textarea {
     font-size: calc(1.05rem * var(--cifra-escala));
     line-height: 1.25;
     overflow-wrap: anywhere;
+    /* linhas com acorde não quebram; se mesmo no tamanho mínimo não couber, rola só a cifra */
+    overflow-x: auto;
+    max-width: 100%;
 }
 
+/* Linhas com acorde nunca quebram: assim o acorde não sai de cima da sílaba.
+   O tamanho da letra é limitado (cifra.js) para a linha mais comprida caber na tela. */
 .cp-line {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: flex-end;
     margin-bottom: 0.15em;
 }
@@ -526,6 +531,23 @@ button, input, select, textarea {
 .cp-chunk {
     display: inline-flex;
     flex-direction: column;
+    flex-shrink: 0;
+}
+
+/* Usado pelo cifra.js só durante a medição do tamanho máximo */
+.cifra-leitor.medindo .cp-line {
+    width: max-content;
+}
+
+/* Linhas só de letra (sem acorde) podem quebrar normalmente */
+.cp-lyrics-only {
+    flex-wrap: wrap;
+}
+
+.cp-lyrics-only .cp-chunk,
+.cp-lyrics-only .cp-lyric {
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .cp-chord {
@@ -538,6 +560,10 @@ button, input, select, textarea {
 }
 
 .cp-lyric {
+    white-space: pre;
+}
+
+.cp-lyrics-only .cp-lyric {
     white-space: pre-wrap;
 }
 
@@ -656,6 +682,18 @@ textarea.editor-cifra {
 .nav-musicas a {
     flex-shrink: 0;
     white-space: nowrap;
+}
+
+/* Barra em coluna (cifras do culto): com flex-wrap a coluna toma a largura do conteúdo mais
+   largo (a lista de músicas) e estica a página para o lado. Sem quebra, fica do tamanho da tela
+   e só a lista de músicas rola para o lado. */
+.barra-leitor.flex-column {
+    flex-wrap: nowrap !important;
+}
+
+.barra-leitor.flex-column > * {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .musica-culto {
