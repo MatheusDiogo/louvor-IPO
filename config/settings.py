@@ -20,13 +20,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-k22kndg_wd7@22g6rev5-!&(x&$9b$res+ls37n(b+b3eqgo2_'
+NO_RAILWAY = bool(os.getenv('RAILWAY_ENVIRONMENT'))
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Chave secreta: em produção defina a variável SECRET_KEY no Railway.
+# (a chave antiga fica só como reserva para o site não parar enquanto a variável não existir)
+SECRET_KEY = os.getenv('SECRET_KEY') or 'django-insecure-k22kndg_wd7@22g6rev5-!&(x&$9b$res+ls37n(b+b3eqgo2_'
 
-ALLOWED_HOSTS = ['*']
+# DEBUG ligado só no computador local. No Railway fica desligado (pode forçar com DJANGO_DEBUG=True).
+DEBUG = os.getenv('DJANGO_DEBUG', 'False' if NO_RAILWAY else 'True').lower() in ('1', 'true', 'sim')
+
+# Endereços aceitos. O link de "Esqueci minha senha" usa o endereço da requisição, então
+# aceitar qualquer um permitiria forjar o link. Domínios extras: ALLOWED_HOSTS=a.com,b.com
+ALLOWED_HOSTS = ['louvor-ipo.up.railway.app', 'localhost', '127.0.0.1']
+if os.getenv('RAILWAY_PUBLIC_DOMAIN'):
+    ALLOWED_HOSTS.append(os.getenv('RAILWAY_PUBLIC_DOMAIN'))
+ALLOWED_HOSTS += [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h.strip()]
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))  # sem repetidos
+if DEBUG and not NO_RAILWAY:
+    ALLOWED_HOSTS = ['*']  # no computador local: aceita o IP da rede (teste pelo celular)
 
 
 # Application definition
@@ -155,7 +166,27 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/home/'
 LOGOUT_REDIRECT_URL = 'login'
 
-CSRF_TRUSTED_ORIGINS = ['https://louvor-ipo.up.railway.app']
+CSRF_TRUSTED_ORIGINS = ['https://louvor-ipo.up.railway.app'] + [
+    f'https://{h}' for h in ALLOWED_HOSTS if h not in ('*', 'localhost', '127.0.0.1', 'louvor-ipo.up.railway.app')
+]
+
+if not DEBUG:
+    # Cookies de sessão e CSRF só trafegam por HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# Erros aparecem no log do Railway (com DEBUG desligado o Django não mostra nada por padrão)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
+    'loggers': {
+        'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
+        # robôs da internet testam endereços falsos o tempo todo; a recusa (400) basta, sem poluir o log
+        'django.security.DisallowedHost': {'handlers': [], 'level': 'CRITICAL', 'propagate': False},
+    },
+}
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
