@@ -1,0 +1,6 @@
+Olá, {{ usuario.first_name }}!
+
+Seu cadastro no Louvor IPO foi aprovado. Agora você já pode entrar com o seu e-mail e a senha que escolheu:
+{{ link }}
+
+Esqueceu a senha? Use "Esqueci minha senha" na tela de entrada.

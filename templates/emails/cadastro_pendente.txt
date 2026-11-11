@@ -1,0 +1,10 @@
+Novo cadastro aguardando aprovação - Louvor IPO
+
+{{ usuario.get_full_name }} se cadastrou no Louvor IPO e está aguardando a aprovação de um líder.
+
+Nome: {{ usuario.get_full_name }}
+E-mail: {{ usuario.email }}
+Toca / canta: {% for instrumento in instrumentos %}{{ instrumento.nome }}{% if not forloop.last %}, {% endif %}{% empty %}nenhum instrumento informado{% endfor %}
+Cadastrado em: {{ usuario.date_joined|date:"d/m/Y H:i" }}
+
+Aprove ou recuse em: {{ link }}

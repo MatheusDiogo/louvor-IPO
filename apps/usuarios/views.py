@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
@@ -17,12 +18,22 @@ Usuario = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def _enviar_email(assunto, mensagem, destinatarios):
-    """Envia e-mail sem quebrar o fluxo caso o serviço de e-mail esteja indisponível."""
+def _enviar_email(request, assunto, template, contexto, destinatarios):
+    """Envia e-mail (texto + HTML) sem quebrar o fluxo caso o serviço de e-mail esteja indisponível.
+
+    `template` é o caminho sem extensão: usa `<template>.txt` e `<template>.html`.
+    """
     if not destinatarios:
         return
+    contexto = {**contexto, 'url_site': request.build_absolute_uri('/').rstrip('/')}
     try:
-        send_mail(assunto, mensagem, settings.DEFAULT_FROM_EMAIL, destinatarios)
+        send_mail(
+            assunto,
+            render_to_string(f'{template}.txt', contexto),
+            settings.DEFAULT_FROM_EMAIL,
+            destinatarios,
+            html_message=render_to_string(f'{template}.html', contexto),
+        )
     except Exception:
         logger.exception('Falha ao enviar e-mail: %s', assunto)
 
@@ -42,9 +53,10 @@ def cadastro_view(request):
         )
         link = request.build_absolute_uri(reverse('integrantes'))
         _enviar_email(
-            'Novo cadastro aguardando aprovação - Louvor IPO',
-            f'{usuario.get_full_name()} ({usuario.email}) se cadastrou no Louvor IPO '
-            f'e está aguardando aprovação.\n\nAprove ou recuse em: {link}',
+            request,
+            f'Novo cadastro aguardando aprovação: {usuario.get_full_name()} - Louvor IPO',
+            'emails/cadastro_pendente',
+            {'usuario': usuario, 'instrumentos': usuario.instrumentos.order_by('nome'), 'link': link},
             lideres,
         )
         from apps.notificacoes import avisos
@@ -81,9 +93,10 @@ def aprovar_integrante(request, id):
     messages.success(request, f'Cadastro de {integrante.get_full_name()} aprovado.')
 
     _enviar_email(
+        request,
         'Cadastro aprovado - Louvor IPO',
-        f'Olá, {integrante.first_name}!\n\nSeu cadastro no Louvor IPO foi aprovado. '
-        f'Entre com seu e-mail e senha em: {request.build_absolute_uri(reverse("login"))}',
+        'emails/cadastro_aprovado',
+        {'usuario': integrante, 'link': request.build_absolute_uri(reverse('login'))},
         [integrante.email],
     )
     return redirect('integrantes')
