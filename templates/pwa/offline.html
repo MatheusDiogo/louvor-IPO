@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include "partials/pwa_head.html" %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Sem internet | Louvor IPO</title>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card text-center">
+            <img src="{% static 'img/icone-192.png' %}" alt="" width="72" height="72" style="border-radius: 50%; margin-bottom: 12px;">
+            <div class="login-header" style="margin-bottom: 16px;">
+                <h2>LOUVOR <span style="font-weight: 300; color: #1a2e1a;">IPO</span></h2>
+            </div>
+            <i class="bi bi-wifi-off" style="font-size: 2.2rem; color: var(--primary-green);"></i>
+            <p style="margin: 10px 0 4px; font-weight: 600;">Você está sem internet</p>
+            <p style="margin: 0 0 18px; color: #555; font-size: 0.92rem;">
+                Esta página ainda não foi aberta neste celular.
+                As páginas que você já abriu (como as <strong>cifras dos próximos cultos</strong>) continuam disponíveis.
+            </p>
+            <button type="button" class="btn-login" onclick="location.reload()">Tentar novamente</button>
+            <a href="/escalas/" class="btn-secundario" style="margin-top: 10px;"><i class="bi bi-calendar-event"></i> Culto</a>
+            <a href="/musicas/" class="btn-secundario" style="margin-top: 10px;"><i class="bi bi-music-note-list"></i> Músicas</a>
+        </div>
+    </div>
+    <script>window.addEventListener('online', () => location.reload());</script>
+</body>
+</html>

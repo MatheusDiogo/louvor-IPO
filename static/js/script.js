@@ -60,3 +60,23 @@ function editarIntegrante(btn) {
     document.getElementById("modalIntegranteTitulo").textContent = "Editar Integrante";
     abrirModal("modalIntegrante");
 }
+
+/* ---------- App (PWA): aviso sem internet e páginas guardadas ---------- */
+
+(function () {
+    const aviso = document.getElementById('avisoOffline');
+    const atualizarAviso = () => { if (aviso) aviso.hidden = navigator.onLine; };
+    window.addEventListener('online', atualizarAviso);
+    window.addEventListener('offline', atualizarAviso);
+    atualizarAviso();
+
+    // Pede ao app para guardar as cifras dos próximos cultos (para abrir mesmo sem internet)
+    const dados = document.getElementById('urlsOffline');
+    if (!dados || !('serviceWorker' in navigator) || !navigator.onLine) return;
+    const conexao = navigator.connection || {};
+    if (conexao.saveData) return;  // modo de economia de dados ligado
+    const urls = JSON.parse(dados.textContent);
+    navigator.serviceWorker.ready.then(registro => {
+        if (registro.active) registro.active.postMessage({ tipo: 'guardar', urls });
+    });
+})();

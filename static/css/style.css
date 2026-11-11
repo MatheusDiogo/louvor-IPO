@@ -823,3 +823,28 @@ body.modo-foco {
 .ajuda .accordion-body li {
     margin-bottom: 0.35rem;
 }
+
+/* Aviso de "sem internet" (app) */
+.aviso-offline {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    padding: 6px 12px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #fde68a;
+}
+
+.aviso-offline[hidden] {
+    display: none;
+}
+
+/* App instalado (sem barra do navegador): respeita o entalhe/câmera do celular */
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+    }
+}

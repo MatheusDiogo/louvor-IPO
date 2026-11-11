@@ -17,6 +17,14 @@ from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
 from apps.core.utils import chave_alfabetica, subtrair_meses
 
+def urls_proximos_cultos(quantidade=4):
+    """Páginas dos próximos cultos para o celular guardar e abrir mesmo sem internet."""
+    urls = []
+    for escala in Escala.objects.filter(data__gte=timezone.localdate()).order_by('data')[:quantidade]:
+        urls += [f'/escalas/{escala.pk}/cifras/', f'/escalas/{escala.pk}/visualizar/']
+    return urls
+
+
 @login_required
 def escala_list(request):
     """Lista apenas escalas futuras (data >= hoje)."""
@@ -31,7 +39,9 @@ def escala_list(request):
         escala.minhas_funcoes = minhas.get(escala.id, [])
         escala.eu_ministro = escala.ministrante_id == request.user.id
 
-    return render(request, 'escalas/escala_list.html', {'escalas': escalas, 'hoje': hoje})
+    return render(request, 'escalas/escala_list.html', {
+        'escalas': escalas, 'hoje': hoje, 'urls_offline': ['/escalas/', '/musicas/'] + urls_proximos_cultos(),
+    })
 
 
 @login_required

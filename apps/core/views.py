@@ -71,7 +71,10 @@ def home(request):
     if request.user.is_lider:
         pendentes = get_user_model().objects.filter(is_active=False).count()
 
+    from apps.escalas.views import urls_proximos_cultos
+
     return render(request, "home.html", {
+        "urls_offline": urls_proximos_cultos(),
         "proximo_culto": proximo_culto,
         "hoje": hoje,
         "pendentes": pendentes,
