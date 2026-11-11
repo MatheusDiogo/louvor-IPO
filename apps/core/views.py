@@ -84,6 +84,11 @@ def home(request):
 def logout_view(request):
     # Só desloga via POST (evita logout forçado por links/imagens externas)
     if request.method == "POST":
+        # Este aparelho deixa de receber as notificações de quem está saindo
+        endpoint = request.POST.get("push_endpoint", "")
+        if endpoint and request.user.is_authenticated:
+            from apps.notificacoes.models import InscricaoPush
+            InscricaoPush.objects.filter(endpoint=endpoint, usuario=request.user).delete()
         logout(request)
         return redirect("login")
     return redirect("home")

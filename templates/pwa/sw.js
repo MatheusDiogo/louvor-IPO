@@ -169,3 +169,40 @@ self.addEventListener('message', evento => {
         })));
     }
 });
+
+// ---------------------------------------------------------------- Notificações push
+self.addEventListener('push', evento => {
+    let dados = {};
+    try {
+        dados = evento.data ? evento.data.json() : {};
+    } catch (e) {
+        dados = { corpo: evento.data ? evento.data.text() : '' };
+    }
+    evento.waitUntil(self.registration.showNotification(dados.titulo || 'Louvor IPO', {
+        body: dados.corpo || '',
+        icon: '{{ icone }}',
+        badge: '{{ badge }}',
+        tag: dados.tag || undefined,
+        renotify: !!dados.tag,       // mesma tag: substitui o aviso anterior, mas ainda vibra
+        lang: 'pt-BR',
+        vibrate: [120, 60, 120],
+        data: { url: dados.url || '/home/' },
+    }));
+});
+
+// Tocar na notificação abre (ou traz para frente) o app na página certa
+self.addEventListener('notificationclick', evento => {
+    evento.notification.close();
+    const destino = new URL((evento.notification.data && evento.notification.data.url) || '/home/', self.location.origin).href;
+    evento.waitUntil((async () => {
+        const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const janela of janelas) {
+            if (new URL(janela.url).origin === self.location.origin) {
+                await janela.focus();
+                try { await janela.navigate(destino); } catch (e) { /* janela não controlada: abre outra */ return self.clients.openWindow(destino); }
+                return;
+            }
+        }
+        return self.clients.openWindow(destino);
+    })());
+});

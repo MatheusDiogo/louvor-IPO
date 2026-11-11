@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.instrumentos',
     'apps.musicas',
     'apps.escalas',
+    'apps.notificacoes',
 ]
 
 MIDDLEWARE = [
@@ -82,6 +83,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.notificacoes.context_processors.notificacoes',
             ],
         },
     },
@@ -206,3 +208,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # Evita que o worker do gunicorn trave (e retorne 500) se o envio nao responder
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+# Notificações push (gere as chaves com: python manage.py gerar_chaves_push)
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '')
+VAPID_EMAIL = os.getenv('VAPID_EMAIL') or EMAIL_HOST_USER or 'louvor@exemplo.com'

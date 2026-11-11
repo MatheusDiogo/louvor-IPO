@@ -28,7 +28,8 @@ urlpatterns = [
     # Escala de integrantes (somente líderes)
     path('equipe/', equipe.escala_equipe, name='escala_equipe'),
     path('equipe/data/', equipe.escala_equipe_adicionar_data, name='escala_equipe_adicionar_data'),
-    path('equipe/<int:pk>/celula/', equipe.escala_equipe_celula, name='escala_equipe_celula'),
+    path('equipe/salvar/', equipe.escala_equipe_salvar, name='escala_equipe_salvar'),
+    path('equipe/publicar/', equipe.escala_equipe_publicar, name='escala_equipe_publicar'),
     path('equipe/exportar/', equipe.escala_equipe_exportar, name='escala_equipe_exportar'),
 
 ]

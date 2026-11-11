@@ -1,5 +1,6 @@
 """Escala de integrantes: quem toca/canta em cada culto (acesso somente de líderes)."""
 import calendar
+import json
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 
@@ -7,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -15,7 +17,8 @@ from django.views.decorators.http import require_POST
 from apps.core.decorators import requer_lider
 from apps.core.utils import chave_alfabetica
 from apps.instrumentos.models import Instrumento
-from .models import Escala, EscalaIntegrante
+from apps.notificacoes import avisos, servico
+from .models import Escala, EscalaIntegrante, PublicacaoEscala
 
 Usuario = get_user_model()
 
@@ -151,10 +154,12 @@ def escala_equipe(request):
             for e in escalas
         },
         'datas': {e.id: e.data.strftime('%d/%m') for e in escalas},
+        'nomes': nomes,
         'contagem': dict(contagem),
         'limite': LIMITE_ESCALAS_MES,
     }
 
+    publicacao = PublicacaoEscala.objects.filter(mes=inicio).first()
     anterior = (inicio - timedelta(days=1)).replace(day=1)
     proximo = fim + timedelta(days=1)
 
@@ -168,6 +173,8 @@ def escala_equipe(request):
         'dados_modal': dados_modal,
         'limite': LIMITE_ESCALAS_MES,
         'hoje': timezone.localdate(),
+        'publicacao': publicacao,
+        'notificacoes_ativas': servico.configurado(),
     })
 
 
@@ -190,57 +197,129 @@ def escala_equipe_adicionar_data(request):
     return redirect(_url_mes(dia))
 
 
+class ErroEscala(Exception):
+    pass
+
+
+def _validar_culto(escala, celulas, ministrante, instrumentos, nomes):
+    """Confere as células enviadas para um culto. Devolve {instrumento: [usuários]} e o ministrante."""
+    resultado = {}
+    vistos = {}  # usuário -> instrumento (uma pessoa por instrumento por culto)
+    atuais = defaultdict(set)
+    for ei in escala.integrantes.all():
+        atuais[ei.instrumento_id].add(ei.usuario_id)
+
+    for inst_id_txt, usuarios in (celulas or {}).items():
+        inst = instrumentos.get(int(inst_id_txt)) if str(inst_id_txt).isdigit() else None
+        if inst is None:
+            raise ErroEscala('Instrumento inválido.')
+        # Pode: quem tem o instrumento cadastrado (ativo) ou quem já estava na célula
+        permitidos = inst.permitidos | atuais[inst.id]
+        lista = []
+        for uid in usuarios or []:
+            uid = int(uid) if str(uid).isdigit() else None
+            if uid is None or uid in lista:
+                continue
+            if uid not in permitidos:
+                raise ErroEscala(f'{nomes.get(uid, "Integrante")} não tem {inst.nome} cadastrado.')
+            if uid in vistos and vistos[uid] != inst.id:
+                raise ErroEscala(f'{nomes.get(uid, "Integrante")} está em {instrumentos[vistos[uid]].nome} e em '
+                                 f'{inst.nome} no culto de {escala.data:%d/%m}. Deixe em um só.')
+            vistos[uid] = inst.id
+            lista.append(uid)
+        resultado[inst.id] = lista
+
+    # Instrumentos não enviados continuam como estão (e também contam para a regra de um por culto)
+    for inst_id, usuarios in atuais.items():
+        if inst_id in resultado:
+            continue
+        for uid in usuarios:
+            if uid in vistos and vistos[uid] != inst_id:
+                raise ErroEscala(f'{nomes.get(uid, "Integrante")} já está em {instrumentos[inst_id].nome} '
+                                 f'no culto de {escala.data:%d/%m}.')
+            vistos[uid] = inst_id
+
+    ministrante = int(ministrante) if str(ministrante or '').isdigit() else None
+    if ministrante not in vistos:
+        ministrante = None  # ministrante precisa estar escalado no culto
+    return resultado, ministrante
+
+
 @login_required
 @requer_lider
 @require_POST
-def escala_equipe_celula(request, pk):
-    """Salva os integrantes de um instrumento em um culto (e o ministrante, se marcado)."""
-    escala = get_object_or_404(Escala, pk=pk)
-    instrumento = get_object_or_404(Instrumento, pk=request.POST.get('instrumento_id'))
+def escala_equipe_salvar(request):
+    """Salva de uma vez todas as alterações feitas na tela de Escalas (um único envio).
 
-    # Só aceita quem tem o instrumento cadastrado
-    permitidos = set(instrumento.musicos.filter(is_active=True).values_list('id', flat=True))
+    Corpo (JSON): {"cultos": {"<id do culto>": {"celulas": {"<id do instrumento>": [ids]}, "ministrante": id|null}}}
+    Se algo for inválido, nada é gravado.
+    """
+    try:
+        dados = json.loads(request.body or '{}')
+        cultos = dados.get('cultos') or {}
+        if not isinstance(cultos, dict):
+            raise ValueError
+    except ValueError:
+        return JsonResponse({'ok': False, 'erro': 'Dados inválidos.'}, status=400)
 
-    # Uma pessoa só pode estar em um instrumento por culto
-    em_outro_instrumento = {
-        ei.usuario_id: ei for ei in EscalaIntegrante.objects
-        .filter(escala=escala).exclude(instrumento=instrumento).select_related('usuario', 'instrumento')
-    }
-    selecionados, recusados = [], []
-    for valor in request.POST.getlist('usuarios'):
-        if not valor.isdigit() or int(valor) not in permitidos or int(valor) in selecionados:
-            continue
-        if int(valor) in em_outro_instrumento:
-            recusados.append(em_outro_instrumento[int(valor)])
-            continue
-        selecionados.append(int(valor))
-    for ei in recusados:
-        nome = ei.usuario.first_name or ei.usuario.username
-        messages.error(request, f'{nome} já está em {ei.instrumento.nome} no culto de {escala.data:%d/%m}. '
-                                f'Tire de lá antes de colocar em {instrumento.nome}.')
+    instrumentos = {}
+    for inst in Instrumento.objects.prefetch_related('musicos'):
+        inst.permitidos = {u.id for u in inst.musicos.all() if u.is_active}
+        instrumentos[inst.id] = inst
+    nomes = _nomes_curtos(list(Usuario.objects.all()))
+    escalas = {e.id: e for e in Escala.objects.filter(pk__in=[k for k in cultos if str(k).isdigit()])
+               .prefetch_related('integrantes')}
 
-    ministrante = request.POST.get('ministrante', '')
-    ministrante = int(ministrante) if ministrante.isdigit() else None
+    try:
+        planos = []
+        for escala_id, culto in cultos.items():
+            escala = escalas.get(int(escala_id)) if str(escala_id).isdigit() else None
+            if escala is None:
+                raise ErroEscala('Um dos cultos não existe mais. Recarregue a página.')
+            celulas, ministrante = _validar_culto(escala, culto.get('celulas'), culto.get('ministrante'),
+                                                  instrumentos, nomes)
+            planos.append((escala, celulas, ministrante))
+    except ErroEscala as erro:
+        return JsonResponse({'ok': False, 'erro': str(erro)}, status=400)
 
     with transaction.atomic():
-        atuais = EscalaIntegrante.objects.filter(escala=escala, instrumento=instrumento)
-        antes = set(atuais.values_list('usuario_id', flat=True))
+        for escala, celulas, ministrante in planos:
+            for inst_id, usuarios in celulas.items():
+                atuais = EscalaIntegrante.objects.filter(escala=escala, instrumento_id=inst_id)
+                antes = set(atuais.values_list('usuario_id', flat=True))
+                atuais.exclude(usuario_id__in=usuarios).delete()
+                for uid in usuarios:  # mantém quem já estava (e a ordem); novos entram no fim
+                    if uid not in antes:
+                        EscalaIntegrante.objects.create(escala=escala, instrumento_id=inst_id, usuario_id=uid)
+            if escala.ministrante_id != ministrante:
+                escala.ministrante_id = ministrante
+                escala.save(update_fields=['ministrante'])
 
-        atuais.exclude(usuario_id__in=selecionados).delete()
-        for uid in selecionados:  # mantém quem já estava (e a ordem), adiciona os novos no fim
-            if uid not in antes:
-                EscalaIntegrante.objects.create(escala=escala, instrumento=instrumento, usuario_id=uid)
+    total = len(planos)
+    messages.success(request, f'Escala salva ({total} culto{"s" if total != 1 else ""} alterado{"s" if total != 1 else ""}).')
+    return JsonResponse({'ok': True})
 
-        if ministrante in selecionados:
-            escala.ministrante_id = ministrante
-        elif escala.ministrante_id in antes:
-            # o ministrante estava nesta célula e foi desmarcado/removido
-            escala.ministrante = None
-        if escala.ministrante_id and not escala.integrantes.filter(usuario_id=escala.ministrante_id).exists():
-            escala.ministrante = None
-        escala.save(update_fields=['ministrante'])
 
-    return redirect(_url_mes(escala.data))
+@login_required
+@requer_lider
+@require_POST
+def escala_equipe_publicar(request):
+    """Publica a escala do mês: todos recebem uma notificação (quem está escalado vê as suas datas)."""
+    inicio = _mes_da_requisicao(request.POST.get('mes'))
+    fim = _fim_do_mes(inicio)
+    if not Escala.objects.filter(data__range=(inicio, fim)).exists():
+        messages.error(request, 'Não há cultos neste mês para publicar.')
+        return redirect(_url_mes(inicio))
+
+    from django.utils.formats import date_format
+    nome_mes = date_format(inicio, 'F').lower()
+    PublicacaoEscala.objects.update_or_create(mes=inicio, defaults={'publicada_por': request.user})
+    avisados = avisos.escala_publicada(inicio, fim, nome_mes)
+    if servico.configurado():
+        messages.success(request, f'Escala de {nome_mes} publicada: {avisados} pessoa(s) com notificações ativadas foram avisadas.')
+    else:
+        messages.success(request, f'Escala de {nome_mes} marcada como publicada (notificações ainda não configuradas no servidor).')
+    return redirect(_url_mes(inicio))
 
 
 @login_required

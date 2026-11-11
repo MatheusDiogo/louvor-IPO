@@ -9,6 +9,8 @@
         <p class="page-subtitle">Gerenciamento de Escalas e Músicas. <a href="{% url 'ajuda' %}" class="text-success text-decoration-none"><i class="bi bi-question-circle"></i> Como usar</a></p>
     </div>
 
+    {% include "partials/notificacoes_cartao.html" %}
+
     {% if proximo_culto %}
     <a href="{% url 'escala_visualizar' proximo_culto.escala.pk %}" class="alert alert-success rounded-4 d-flex align-items-center gap-3 text-decoration-none mb-4">
         <i class="bi bi-calendar-check fs-3"></i>

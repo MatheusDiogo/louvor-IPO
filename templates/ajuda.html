@@ -102,6 +102,22 @@
                 </div>
             </div>
         </div>
+
+        <div class="accordion-item">
+            <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a-notificacoes">
+                <i class="bi bi-bell me-2 text-success"></i>Notificações</button></h4>
+            <div id="a-notificacoes" class="accordion-collapse collapse" data-bs-parent="#ajudaIntegrantes">
+                <div class="accordion-body">
+                    <p class="mb-2">Na tela inicial, toque em <strong>Ativar notificações</strong> e permita quando o celular perguntar. Uma notificação de teste confirma que funcionou. Você vai receber:</p>
+                    <ul>
+                        <li><strong>Músicas do culto:</strong> quando o repertório do culto em que você está escalado fica pronto (5 músicas) e quando muda alguma música. Quem toca instrumento também é avisado quando um <strong>tom</strong> muda.</li>
+                        <li><strong>Escala do mês:</strong> quando a escala é publicada, com as suas datas.</li>
+                    </ul>
+                    <p class="mb-2"><strong>iPhone:</strong> só funciona com o app instalado (Compartilhar → <em>Adicionar à Tela de Início</em>) e com iOS 16.4 ou mais novo. Ative pelo app instalado.</p>
+                    <p class="mb-0 small text-muted">Cada celular é ativado separadamente. Ao sair da conta, aquele celular para de receber os seus avisos. Para parar, toque em <strong>Desativar</strong> na tela inicial.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if user.is_lider %}
@@ -115,7 +131,7 @@
             <div id="l-integrantes" class="accordion-collapse collapse" data-bs-parent="#ajudaLideres">
                 <div class="accordion-body">
                     <ul class="mb-0">
-                        <li>Quando alguém se cadastra, todos os líderes recebem um e-mail e o card <strong>Integrantes</strong> mostra quantos estão <span class="badge bg-danger">pendentes</span>.</li>
+                        <li>Quando alguém se cadastra, todos os líderes recebem um e-mail (e uma notificação, se ativada) e o card <strong>Integrantes</strong> mostra quantos estão <span class="badge bg-danger">pendentes</span>.</li>
                         <li>Em <strong>Integrantes</strong>, a seção <strong>Aguardando aprovação</strong> tem os botões <strong>Aprovar</strong> e <strong>Recusar</strong> (recusar apaga o cadastro).</li>
                         <li><strong>Novo Integrante</strong> cadastra alguém direto, com a senha inicial <strong>louvoripo</strong>.</li>
                         <li>Em <strong>Editar</strong> você ajusta nome, e-mail, instrumentos e liga a chave <strong>Líder</strong>.</li>
@@ -146,6 +162,8 @@
                         <li>Toque numa célula (data × instrumento) e marque quem vai participar. A lista mostra só quem tem aquele instrumento cadastrado e quantas vezes cada um já está no mês.</li>
                         <li>Cada pessoa pode estar em <strong>um instrumento por culto</strong>. Quem já está em outro instrumento naquela data aparece apagado (“Já está em Violão neste culto”). Para trocar, tire da outra célula primeiro.</li>
                         <li>Toque na <i class="bi bi-star-fill text-warning"></i> ao lado de um nome para definir o <strong>ministrante</strong> do culto (só um por culto).</li>
+                        <li>Toque em <strong>Aplicar</strong>: a mudança aparece na tela (célula em amarelo), mas <strong>ainda não foi gravada</strong>. Faça todas as mudanças que quiser e, no fim, toque em <strong>Salvar</strong> na barra amarela. <strong>Descartar</strong> desfaz tudo o que não foi salvo.</li>
+                        <li>Com tudo salvo, toque em <strong>Publicar escala</strong>: todos com notificações ativadas recebem o aviso (quem está escalado recebe as suas datas). Se mudar algo depois, use <strong>Avisar de novo</strong>.</li>
                     </ol>
                     <p class="mb-2">Quem estiver escalado <strong>3 vezes ou mais no mês</strong> fica em <span class="text-danger fw-semibold">vermelho</span>, e o aviso no topo lista essas pessoas.</p>
                     <p class="mb-0"><strong>Exportar</strong>: escolha o período e toque em <strong>Baixar imagem</strong> (ou <strong>Compartilhar</strong> no celular) para mandar a escala no grupo. O ministrante aparece com <strong>*</strong>.</p>

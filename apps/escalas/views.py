@@ -15,6 +15,7 @@ from apps.musicas.cifra import (
 from apps.musicas.cifra_pdf import gerar_pdf
 from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
+from apps.notificacoes import avisos
 from apps.core.utils import chave_alfabetica, subtrair_meses
 
 def urls_proximos_cultos(quantidade=4):
@@ -171,8 +172,11 @@ def escala_musica_adicionar(request, pk):
     if EscalaMusica.objects.filter(escala=escala, musica=musica).exists():
         messages.error(request, f'"{musica.nome}" já está neste culto.')
     else:
-        EscalaMusica.objects.create(escala=escala, musica=musica, tom=_tom_valido(request.POST.get('tom', ''), musica))
+        item = EscalaMusica.objects.create(escala=escala, musica=musica, tom=_tom_valido(request.POST.get('tom', ''), musica))
         messages.success(request, f'"{musica.nome}" adicionada!')
+        total = escala.itens.count()
+        if avisos.repertorio_adicionado(escala, item, total) and total == avisos.MUSICAS_PARA_AVISAR:
+            messages.info(request, f'{total} músicas no culto: a equipe escalada foi avisada por notificação.')
     return redirect('escala_detalhe', pk=pk)
 
 
@@ -181,9 +185,11 @@ def escala_musica_adicionar(request, pk):
 @require_POST
 def escala_musica_tom(request, item_pk):
     """Troca o tom de uma música no culto."""
-    item = get_object_or_404(EscalaMusica.objects.select_related('musica'), pk=item_pk)
+    item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
+    tom_antigo = item.tom
     item.tom = _tom_valido(request.POST.get('tom', ''), item.musica)
     item.save(update_fields=['tom'])
+    avisos.tom_alterado(item.escala, item, tom_antigo)
     messages.success(request, f'"{item.musica.nome}" agora em {item.tom or "tom original"}.')
     return redirect('escala_detalhe', pk=item.escala_id)
 
@@ -193,9 +199,12 @@ def escala_musica_tom(request, item_pk):
 @require_POST
 def escala_musica_excluir(request, item_pk):
     """Remove uma música do culto."""
-    item = get_object_or_404(EscalaMusica, pk=item_pk)
+    item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
     escala_pk = item.escala.pk
+    total_antes = item.escala.itens.count()
+    nome = item.musica.nome
     item.delete()
+    avisos.repertorio_removido(item.escala, nome, total_antes)
     messages.success(request, 'Música removida do culto.')
     return redirect('escala_detalhe', pk=escala_pk)
 

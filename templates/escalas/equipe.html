@@ -19,6 +19,35 @@
         </div>
     </div>
 
+    {% if linhas %}
+    <!-- Publicar: avisa todos por notificação -->
+    <form method="post" action="{% url 'escala_equipe_publicar' %}" class="table-card px-3 py-2 mb-3 d-flex flex-wrap align-items-center gap-2" id="formPublicar"
+          onsubmit="return confirm('Publicar a escala de {{ mes|date:"F"|lower }}? Todos com notificações ativadas serão avisados (quem está escalado recebe as suas datas).')">
+        {% csrf_token %}
+        <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
+        <span class="small flex-grow-1">
+            {% if publicacao %}
+            <i class="bi bi-check-circle-fill text-success me-1"></i>Publicada em {{ publicacao.publicada_em|date:"d/m \à\s H:i" }}
+            {% else %}
+            <i class="bi bi-megaphone text-secondary me-1"></i>Escala de {{ mes|date:"F"|lower }} ainda não publicada
+            {% endif %}
+            {% if not notificacoes_ativas %}<span class="d-block text-muted">Notificações ainda não configuradas no servidor.</span>{% endif %}
+        </span>
+        <button type="submit" class="btn btn-sm {% if publicacao %}btn-outline-success{% else %}btn-success{% endif %} rounded-pill px-3" id="btnPublicar">
+            <i class="bi bi-send me-1"></i>{% if publicacao %}Avisar de novo{% else %}Publicar escala{% endif %}
+        </button>
+    </form>
+    {% endif %}
+
+    <!-- Alterações ainda não salvas -->
+    <div class="barra-salvar" id="barraSalvar" hidden>
+        <span class="small fw-semibold"><i class="bi bi-pencil-square me-1"></i><span id="textoAlteracoes"></span></span>
+        <div class="d-flex gap-2 ms-auto">
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" id="btnDescartar">Descartar</button>
+            <button type="button" class="btn btn-sm btn-success rounded-pill px-3" id="btnSalvar"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+        </div>
+    </div>
+
     <!-- Navegação entre meses -->
     <div class="d-flex align-items-center justify-content-between mb-3 table-card px-2 py-2">
         <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Mês anterior"><i class="bi bi-chevron-left"></i></a>
@@ -26,18 +55,16 @@
         <a href="?mes={{ mes_proximo|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Próximo mês"><i class="bi bi-chevron-right"></i></a>
     </div>
 
-    {% if alertas %}
-    <div class="alert alert-danger rounded-3 small py-2">
+    <div class="alert alert-danger rounded-3 small py-2" id="alertaLimite" {% if not alertas %}hidden{% endif %}>
         <i class="bi bi-exclamation-triangle-fill me-1"></i>
         Escalados {{ limite }}x ou mais neste mês:
-        {% for a in alertas %}<strong>{{ a.nome }}</strong> ({{ a.vezes }}x){% if not forloop.last %}, {% endif %}{% endfor %}
+        <span id="alertaNomes">{% for a in alertas %}<strong>{{ a.nome }}</strong> ({{ a.vezes }}x){% if not forloop.last %}, {% endif %}{% endfor %}</span>
     </div>
-    {% endif %}
 
     <p class="small text-muted mb-2">
         <i class="bi bi-star-fill text-warning"></i> Ministrante &nbsp;·&nbsp;
         <span class="text-danger fw-semibold">Vermelho</span> = escalado {{ limite }}x ou mais no mês &nbsp;·&nbsp;
-        Toque em uma célula para editar.
+        Toque em uma célula para editar e depois em <strong>Salvar</strong>.
     </p>
 
     {% if linhas %}
@@ -71,11 +98,13 @@
                         {% for celula in linha.celulas %}
                         <td class="p-0">
                             <button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
-                                {% for m in celula.membros %}
-                                <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}" {% if m.alerta %}title="Escalado {{ m.vezes }}x no mês"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
-                                {% empty %}
-                                <span class="text-muted opacity-50">—</span>
-                                {% endfor %}
+                                <span class="membros-celula" data-vazio="—">
+                                    {% for m in celula.membros %}
+                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                                    {% empty %}
+                                    <span class="text-muted opacity-50">—</span>
+                                    {% endfor %}
+                                </span>
                             </button>
                         </td>
                         {% endfor %}
@@ -104,7 +133,7 @@
             {% for celula in linha.celulas %}
             <button type="button" class="celula-escala celula-mobile" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
                 <span class="text-secondary small fw-semibold instrumento-label">{{ celula.instrumento.nome }}</span>
-                <span class="flex-grow-1 text-end">
+                <span class="flex-grow-1 text-end membros-celula" data-vazio="Toque para escalar">
                     {% for m in celula.membros %}
                     <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
                     {% empty %}
@@ -156,22 +185,18 @@
 <div class="modal fade" id="modalCelula" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
-            <form method="post" id="formCelula" class="d-flex flex-column" style="min-height: 0;">
-                {% csrf_token %}
-                <input type="hidden" name="instrumento_id" id="celulaInstrumento">
-                <div class="modal-header border-0 pt-4 px-4">
-                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="celulaTitulo"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body px-4 pt-0">
-                    <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante do culto.</p>
-                    <div class="list-group" id="celulaLista"></div>
-                </div>
-                <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-login btn-acao">Salvar</button>
-                </div>
-            </form>
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="celulaTitulo"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pt-0">
+                <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante do culto.</p>
+                <div class="list-group" id="celulaLista"></div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-login btn-acao" id="btnAplicar">Aplicar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -181,96 +206,255 @@
 
 {% block scripts %}
 <script>
-const dadosEscala = JSON.parse(document.getElementById('dadosEscala').textContent);
-const urlCelula = "{% url 'escala_equipe_celula' 0 %}";
+(function () {
+    const dados = JSON.parse(document.getElementById('dadosEscala').textContent);
+    const URL_SALVAR = "{% url 'escala_equipe_salvar' %}";
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const escalas = Object.keys(dados.datas);
+    const chave = (e, i) => `${e}-${i}`;
 
-function editarCelula(btn) {
-    const escalaId = btn.dataset.escala;
-    const instId = btn.dataset.instrumento;
-    const inst = dadosEscala.instrumentos[instId];
-    const selecionados = (dadosEscala.celulas[`${escalaId}-${instId}`] || []).map(String);
-    const ministrante = String(dadosEscala.ministrante[escalaId] || '');
-    const lista = document.getElementById('celulaLista');
+    // Estado na tela (só vai para o banco ao tocar em Salvar)
+    const original = JSON.parse(JSON.stringify({ celulas: dados.celulas, ministrante: dados.ministrante }));
+    const estado = JSON.parse(JSON.stringify(original));
+    let celulaAberta = null;
 
-    document.getElementById('formCelula').action = urlCelula.replace('/0/', `/${escalaId}/`);
-    document.getElementById('celulaInstrumento').value = instId;
-    document.getElementById('celulaTitulo').textContent = `${inst.nome} · ${dadosEscala.datas[escalaId]}`;
-    lista.replaceChildren();
+    const membrosDe = (e, i) => (estado.celulas[chave(e, i)] || []).map(Number);
+    const instrumentosIds = Object.keys(dados.instrumentos);
 
-    if (!inst.membros.length) {
-        const vazio = document.createElement('div');
-        vazio.className = 'text-muted small text-center py-3';
-        vazio.textContent = `Nenhum integrante tem "${inst.nome}" cadastrado. Cadastre em Integrantes.`;
-        lista.append(vazio);
+    // Em qual instrumento cada pessoa está, em cada culto
+    function ocupados(e) {
+        const mapa = {};
+        instrumentosIds.forEach(i => membrosDe(e, i).forEach(uid => { mapa[uid] = Number(i); }));
+        return mapa;
     }
 
-    inst.membros.forEach(m => {
-        const id = String(m.id);
-        const marcado = selecionados.includes(id);
-        const vezes = (dadosEscala.contagem[id] || 0);
-        const linha = document.createElement('div');
-        linha.className = 'list-group-item d-flex align-items-center gap-2 py-2';
-        const rotulo = document.createElement('label');
-        rotulo.className = 'd-flex align-items-center gap-3 flex-grow-1 py-1';
-        rotulo.style.cursor = 'pointer';
+    // Quantos cultos diferentes cada pessoa tem no mês
+    function contagem() {
+        const total = {};
+        escalas.forEach(e => Object.keys(ocupados(e)).forEach(uid => { total[uid] = (total[uid] || 0) + 1; }));
+        return total;
+    }
 
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.name = 'usuarios'; cb.value = id; cb.checked = marcado;
-        cb.className = 'form-check-input m-0 flex-shrink-0';
+    function cultosAlterados() {
+        return escalas.filter(e => {
+            const mudouMinistrante = String(estado.ministrante[e] || '') !== String(original.ministrante[e] || '');
+            return mudouMinistrante || instrumentosIds.some(i =>
+                JSON.stringify(membrosDe(e, i)) !== JSON.stringify((original.celulas[chave(e, i)] || []).map(Number)));
+        });
+    }
 
-        // Já escalado em outro instrumento neste culto? (uma pessoa por instrumento por culto)
-        const ocupado = (dadosEscala.ocupados[escalaId] || {})[id];
-        const emOutro = ocupado && String(ocupado[0]) !== String(instId) ? ocupado[1] : '';
-
-        const nome = document.createElement('span');
-        nome.className = 'flex-grow-1';
-        nome.textContent = m.nome;
-        const info = document.createElement('small');
-        info.className = 'd-block ' + (vezes >= dadosEscala.limite ? 'text-danger fw-semibold' : 'text-muted');
-        info.textContent = vezes ? `${vezes}x no mês` : 'Nenhuma vez no mês';
-        nome.append(info);
-        if (emOutro) {
-            const aviso = document.createElement('small');
-            aviso.className = 'd-block text-warning-emphasis fw-semibold';
-            aviso.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>';
-            aviso.append(marcado ? `Também está em ${emOutro}: tire de um dos dois` : `Já está em ${emOutro} neste culto`);
-            nome.append(aviso);
-            if (!marcado) {
-                cb.disabled = true;
-                linha.classList.add('opacity-50');
-                rotulo.style.cursor = 'not-allowed';
+    // ------------------------------------------------------------ desenho da tela
+    function desenhar() {
+        const total = contagem();
+        document.querySelectorAll('.celula-escala').forEach(botao => {
+            const e = botao.dataset.escala, i = botao.dataset.instrumento;
+            const alvo = botao.querySelector('.membros-celula');
+            const membros = membrosDe(e, i);
+            alvo.replaceChildren();
+            if (!membros.length) {
+                const vazio = document.createElement('span');
+                vazio.className = 'text-muted opacity-50';
+                vazio.textContent = alvo.dataset.vazio;
+                alvo.append(vazio);
             }
+            membros.forEach(uid => {
+                const span = document.createElement('span');
+                span.className = 'membro' + ((total[uid] || 0) >= dados.limite ? ' text-danger fw-semibold' : '');
+                span.textContent = dados.nomes[uid] || '?';
+                if (String(estado.ministrante[e] || '') === String(uid)) {
+                    span.insertAdjacentHTML('beforeend', ' <i class="bi bi-star-fill text-warning"></i>');
+                }
+                alvo.append(span);
+            });
+            const mudou = JSON.stringify(membros) !== JSON.stringify((original.celulas[chave(e, i)] || []).map(Number));
+            botao.classList.toggle('celula-alterada', mudou);
+        });
+
+        // Aviso de quem passou do limite no mês
+        const acima = Object.entries(total).filter(([, n]) => n >= dados.limite)
+            .sort((a, b) => b[1] - a[1] || (dados.nomes[a[0]] || '').localeCompare(dados.nomes[b[0]] || ''));
+        const alerta = document.getElementById('alertaLimite');
+        const nomes = document.getElementById('alertaNomes');
+        nomes.replaceChildren();
+        acima.forEach(([uid, n], k) => {
+            const forte = document.createElement('strong');
+            forte.textContent = dados.nomes[uid] || '?';
+            nomes.append(forte, ` (${n}x)${k < acima.length - 1 ? ', ' : ''}`);
+        });
+        alerta.hidden = !acima.length;
+
+        // Barra de salvar
+        const alterados = cultosAlterados();
+        document.getElementById('barraSalvar').hidden = !alterados.length;
+        document.getElementById('textoAlteracoes').textContent = alterados.length === 1
+            ? 'Alterações em 1 culto não salvas' : `Alterações em ${alterados.length} cultos não salvas`;
+        document.getElementById('btnSalvar').innerHTML = `<i class="bi bi-check-lg me-1"></i>Salvar (${alterados.length})`;
+        const publicar = document.getElementById('btnPublicar');
+        if (publicar) {
+            publicar.disabled = alterados.length > 0;
+            publicar.title = alterados.length ? 'Salve as alterações antes de publicar' : '';
+        }
+    }
+
+    // ------------------------------------------------------------ modal da célula
+    window.editarCelula = function (btn) {
+        const e = btn.dataset.escala, instId = btn.dataset.instrumento;
+        const inst = dados.instrumentos[instId];
+        const selecionados = membrosDe(e, instId).map(String);
+        const ministrante = String(estado.ministrante[e] || '');
+        const lista = document.getElementById('celulaLista');
+        const ocup = ocupados(e);
+        const total = contagem();
+        celulaAberta = { e, instId };
+
+        document.getElementById('celulaTitulo').textContent = `${inst.nome} · ${dados.datas[e]}`;
+        lista.replaceChildren();
+
+        // Inclui quem já está na célula mesmo sem o instrumento cadastrado (ex.: integrante desativado)
+        const membros = inst.membros.slice();
+        selecionados.forEach(uid => {
+            if (!membros.some(m => String(m.id) === uid)) membros.push({ id: Number(uid), nome: dados.nomes[uid] || '?' });
+        });
+        if (!membros.length) {
+            const vazio = document.createElement('div');
+            vazio.className = 'text-muted small text-center py-3';
+            vazio.textContent = `Nenhum integrante tem "${inst.nome}" cadastrado. Cadastre em Integrantes.`;
+            lista.append(vazio);
         }
 
-        const estrela = document.createElement('input');
-        estrela.type = 'checkbox'; estrela.name = 'ministrante'; estrela.value = id;
-        estrela.className = 'btn-check';
-        estrela.id = `min_${id}`;
-        estrela.checked = marcado && ministrante === id;
-        estrela.disabled = !marcado;
-        const estrelaLabel = document.createElement('label');
-        estrelaLabel.className = 'btn btn-sm btn-outline-warning rounded-pill flex-shrink-0';
-        estrelaLabel.htmlFor = estrela.id;
-        estrelaLabel.title = 'Ministrante';
-        estrelaLabel.innerHTML = '<i class="bi bi-star-fill"></i>';
+        membros.forEach(m => {
+            const id = String(m.id);
+            const marcado = selecionados.includes(id);
+            const vezes = total[id] || 0;
+            const linha = document.createElement('div');
+            linha.className = 'list-group-item d-flex align-items-center gap-2 py-2';
+            const rotulo = document.createElement('label');
+            rotulo.className = 'd-flex align-items-center gap-3 flex-grow-1 py-1';
+            rotulo.style.cursor = 'pointer';
 
-        // Só um ministrante por vez; só pode ser ministrante quem está marcado
-        estrela.addEventListener('change', () => {
-            if (estrela.checked) {
-                lista.querySelectorAll('input[name="ministrante"]').forEach(o => { if (o !== estrela) o.checked = false; });
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.value = id; cb.checked = marcado;
+            cb.className = 'form-check-input m-0 flex-shrink-0 marcar-membro';
+
+            // Uma pessoa por instrumento em cada culto
+            const emOutro = ocup[id] !== undefined && String(ocup[id]) !== String(instId)
+                ? dados.instrumentos[ocup[id]].nome : '';
+
+            const nome = document.createElement('span');
+            nome.className = 'flex-grow-1';
+            nome.textContent = m.nome;
+            const info = document.createElement('small');
+            info.className = 'd-block ' + (vezes >= dados.limite ? 'text-danger fw-semibold' : 'text-muted');
+            info.textContent = vezes ? `${vezes}x no mês` : 'Nenhuma vez no mês';
+            nome.append(info);
+            if (emOutro) {
+                const aviso = document.createElement('small');
+                aviso.className = 'd-block text-warning-emphasis fw-semibold';
+                aviso.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>';
+                aviso.append(marcado ? `Também está em ${emOutro}: tire de um dos dois` : `Já está em ${emOutro} neste culto`);
+                nome.append(aviso);
+                if (!marcado) {
+                    cb.disabled = true;
+                    linha.classList.add('opacity-50');
+                    rotulo.style.cursor = 'not-allowed';
+                }
             }
-        });
-        cb.addEventListener('change', () => {
-            estrela.disabled = !cb.checked;
-            if (!cb.checked) estrela.checked = false;
+
+            const estrela = document.createElement('input');
+            estrela.type = 'checkbox'; estrela.value = id;
+            estrela.className = 'btn-check marcar-ministrante';
+            estrela.id = `min_${id}`;
+            estrela.checked = marcado && ministrante === id;
+            estrela.disabled = !marcado;
+            const estrelaLabel = document.createElement('label');
+            estrelaLabel.className = 'btn btn-sm btn-outline-warning rounded-pill flex-shrink-0';
+            estrelaLabel.htmlFor = estrela.id;
+            estrelaLabel.title = 'Ministrante';
+            estrelaLabel.innerHTML = '<i class="bi bi-star-fill"></i>';
+
+            estrela.addEventListener('change', () => {
+                if (estrela.checked) lista.querySelectorAll('.marcar-ministrante').forEach(o => { if (o !== estrela) o.checked = false; });
+            });
+            cb.addEventListener('change', () => {
+                estrela.disabled = !cb.checked;
+                if (!cb.checked) estrela.checked = false;
+            });
+
+            rotulo.append(cb, nome);
+            linha.append(rotulo, estrela, estrelaLabel);
+            lista.append(linha);
         });
 
-        rotulo.append(cb, nome);
-        linha.append(rotulo, estrela, estrelaLabel);
-        lista.append(linha);
+        abrirModal('modalCelula');
+    };
+
+    // "Aplicar": muda só a tela (o banco só muda ao Salvar)
+    document.getElementById('btnAplicar').addEventListener('click', () => {
+        if (!celulaAberta) return;
+        const { e, instId } = celulaAberta;
+        const lista = document.getElementById('celulaLista');
+        const marcados = Array.from(lista.querySelectorAll('.marcar-membro:checked')).map(cb => Number(cb.value));
+        const antes = membrosDe(e, instId);
+        // mantém a ordem de quem já estava; novos entram no fim
+        estado.celulas[chave(e, instId)] = antes.filter(uid => marcados.includes(uid))
+            .concat(marcados.filter(uid => !antes.includes(uid)));
+
+        const estrela = lista.querySelector('.marcar-ministrante:checked');
+        if (estrela) {
+            estado.ministrante[e] = Number(estrela.value);
+        } else if (antes.includes(Number(estado.ministrante[e]))) {
+            estado.ministrante[e] = null;  // o ministrante estava nesta célula e foi desmarcado
+        }
+        if (estado.ministrante[e] && ocupados(e)[estado.ministrante[e]] === undefined) estado.ministrante[e] = null;
+
+        bootstrap.Modal.getInstance(document.getElementById('modalCelula')).hide();
+        desenhar();
     });
 
-    abrirModal('modalCelula');
-}
+    // ------------------------------------------------------------ salvar / descartar
+    document.getElementById('btnSalvar').addEventListener('click', async () => {
+        const alterados = cultosAlterados();
+        if (!alterados.length) return;
+        const cultos = {};
+        alterados.forEach(e => {
+            const celulas = {};
+            instrumentosIds.forEach(i => { celulas[i] = membrosDe(e, i); });
+            cultos[e] = { celulas, ministrante: estado.ministrante[e] || null };
+        });
+        const botao = document.getElementById('btnSalvar');
+        botao.disabled = true;
+        botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+        try {
+            const resposta = await fetch(URL_SALVAR, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ cultos }),
+            });
+            const retorno = await resposta.json().catch(() => ({}));
+            if (!resposta.ok || !retorno.ok) throw new Error(retorno.erro || 'Não foi possível salvar. Tente de novo.');
+            salvando = true;
+            window.location.reload();
+        } catch (erro) {
+            alert(navigator.onLine ? erro.message : 'Sem internet: a escala não foi salva. Tente de novo quando a conexão voltar.');
+            botao.disabled = false;
+            desenhar();
+        }
+    });
+
+    document.getElementById('btnDescartar').addEventListener('click', () => {
+        if (!confirm('Descartar as alterações não salvas?')) return;
+        estado.celulas = JSON.parse(JSON.stringify(original.celulas));
+        estado.ministrante = JSON.parse(JSON.stringify(original.ministrante));
+        desenhar();
+    });
+
+    // Avisa antes de sair da página com alterações não salvas
+    let salvando = false;
+    window.addEventListener('beforeunload', ev => {
+        if (!salvando && cultosAlterados().length) { ev.preventDefault(); ev.returnValue = ''; }
+    });
+
+    desenhar();
+})();
 </script>
 {% endblock %}

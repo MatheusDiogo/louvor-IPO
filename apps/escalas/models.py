@@ -69,3 +69,19 @@ class EscalaIntegrante(models.Model):
 
     def __str__(self):
         return f"{self.usuario} ({self.instrumento}) em {self.escala.data}"
+
+
+# Escala de um mês publicada (avisa todos por notificação)
+class PublicacaoEscala(models.Model):
+    mes = models.DateField(unique=True, help_text="Primeiro dia do mês publicado")
+    publicada_em = models.DateTimeField(auto_now=True)
+    publicada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+"
+    )
+
+    def __str__(self):
+        return f"Escala de {self.mes:%m/%Y} publicada"

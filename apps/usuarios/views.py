@@ -47,6 +47,8 @@ def cadastro_view(request):
             f'e está aguardando aprovação.\n\nAprove ou recuse em: {link}',
             lideres,
         )
+        from apps.notificacoes import avisos
+        avisos.cadastro_pendente(usuario)
         return render(request, 'cadastro_enviado.html', {'nome': usuario.first_name})
 
     return render(request, 'cadastro.html', {

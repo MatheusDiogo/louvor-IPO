@@ -15,7 +15,8 @@ CDN = [
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
 ]
-ESTATICOS = ['css/style.css', 'js/script.js', 'js/cifra.js', 'img/icone-192.png', 'img/favicon-32.png']
+ESTATICOS = ['css/style.css', 'js/script.js', 'js/cifra.js', 'js/notificacoes.js',
+             'img/icone-192.png', 'img/favicon-32.png', 'img/badge-96.png']
 
 # Aumente quando mudar a lógica do service worker sem mudar os arquivos estáticos
 VERSAO_SW = 1
@@ -68,6 +69,8 @@ def service_worker(request):
     conteudo = render_to_string('pwa/sw.js', {
         'versao': versao,
         'precache_json': json.dumps(['/offline/'] + estaticos + CDN),
+        'icone': static('img/icone-192.png'),
+        'badge': static('img/badge-96.png'),
     })
     resposta = HttpResponse(conteudo, content_type='application/javascript; charset=utf-8')
     resposta['Service-Worker-Allowed'] = '/'
