@@ -208,3 +208,5 @@ __marimo__/
 
 media/
 .dockerignore
+# Gerada pelo collectstatic no deploy (Dockerfile); não versionar
+staticfiles/
