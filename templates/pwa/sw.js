@@ -6,7 +6,10 @@
 //   - POST, admin e importação: nunca passam pelo cache
 //   - ao sair da conta (logout) as páginas salvas são apagadas
 const VERSAO = '{{ versao }}';
-const CACHE_ESTATICOS = 'louvor-estaticos';
+// Os arquivos guardados ficam num cache por versão: ao atualizar o app, os antigos são descartados
+const CACHE_ESTATICOS = 'louvor-estaticos-' + VERSAO;
+// Nome com hash (ex.: style.3f9a1c2b7d4e.css) nunca muda de conteúdo; sem hash pode mudar a cada deploy
+const NOME_COM_HASH = /\.[0-9a-f]{12}\.[a-z0-9]+$/;
 const CACHE_PAGINAS = 'louvor-paginas';
 const PRECACHE = {{ precache_json|safe }};
 const MAX_PAGINAS = 150;
@@ -88,6 +91,24 @@ async function redePrimeiro(evento) {
     }
 }
 
+// Arquivo do site sem hash no nome: busca a versão nova; sem internet, usa a guardada
+async function estaticoRedePrimeiro(requisicao) {
+    try {
+        // cache: 'no-cache' = confere com o servidor (resposta curta "não mudou" se for igual),
+        // em vez de aceitar a cópia do cache HTTP do navegador, que pode ser da versão anterior
+        const resposta = await comTempoLimite(fetch(requisicao, { cache: 'no-cache' }), 3500);
+        if (resposta.ok) {
+            const cache = await caches.open(CACHE_ESTATICOS);
+            await cache.put(requisicao, resposta.clone());
+        }
+        return resposta;
+    } catch (erro) {
+        const salva = await caches.match(requisicao);
+        if (salva) return salva;
+        throw erro;
+    }
+}
+
 async function cachePrimeiro(requisicao) {
     const salva = await caches.match(requisicao);
     if (salva) return salva;
@@ -117,9 +138,12 @@ self.addEventListener('fetch', evento => {
     }
     if (requisicao.method !== 'GET') return;
 
-    if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'cdnjs.cloudflare.com'
-            || (url.origin === self.location.origin && url.pathname.startsWith('/static/'))) {
-        evento.respondWith(cachePrimeiro(requisicao));
+    if (url.origin === self.location.origin && url.pathname.startsWith('/static/')) {
+        evento.respondWith(NOME_COM_HASH.test(url.pathname) ? cachePrimeiro(requisicao) : estaticoRedePrimeiro(requisicao));
+        return;
+    }
+    if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'cdnjs.cloudflare.com') {
+        evento.respondWith(cachePrimeiro(requisicao));  // URLs com versão fixa (bootstrap@5.3.3...)
         return;
     }
     if (url.origin === self.location.origin && url.pathname.startsWith('/media/')) {

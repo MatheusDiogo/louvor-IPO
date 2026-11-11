@@ -886,3 +886,9 @@ body.modo-foco {
         padding-top: env(safe-area-inset-top);
     }
 }
+
+/* Trava de segurança: o conteúdo nunca faz a página inteira rolar para o lado no celular.
+   (clip não cria área de rolagem, então a barra fixa do topo e a tela cheia continuam funcionando) */
+main.container {
+    overflow-x: clip;
+}

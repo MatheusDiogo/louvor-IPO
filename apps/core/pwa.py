@@ -2,6 +2,7 @@
 import hashlib
 import json
 
+from django.contrib.staticfiles import finders
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -46,11 +47,24 @@ def manifesto(request):
     return HttpResponse(json.dumps(dados, ensure_ascii=False), content_type='application/manifest+json')
 
 
+def _hash_conteudo():
+    """Hash do conteúdo dos arquivos do app. Com DEBUG=True os nomes não têm hash (style.css),
+    então é o conteúdo que indica que há versão nova para o celular baixar."""
+    resumo = hashlib.sha1()
+    for caminho in ESTATICOS:
+        arquivo = finders.find(caminho)
+        if arquivo:
+            with open(arquivo, 'rb') as f:
+                resumo.update(f.read())
+    return resumo.hexdigest()
+
+
 @cache_control(no_cache=True, max_age=0)
 def service_worker(request):
     estaticos = [static(caminho) for caminho in ESTATICOS]
-    # A versão muda quando algum arquivo estático muda (nomes com hash) -> o celular atualiza o app
-    versao = hashlib.sha1(json.dumps([VERSAO_SW, estaticos]).encode()).hexdigest()[:10]
+    # A versão muda quando algum arquivo do app muda -> o celular baixa o service worker novo,
+    # que descarta os arquivos antigos guardados
+    versao = hashlib.sha1(json.dumps([VERSAO_SW, estaticos, _hash_conteudo()]).encode()).hexdigest()[:10]
     conteudo = render_to_string('pwa/sw.js', {
         'versao': versao,
         'precache_json': json.dumps(['/offline/'] + estaticos + CDN),
