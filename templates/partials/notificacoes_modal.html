@@ -1,0 +1,29 @@
+{# Janela aberta pelo sino da barra do topo: ativar/desativar as notificações deste aparelho #}
+<div class="modal fade" id="modalNotificacoes" tabindex="-1" aria-labelledby="modalNotificacoesTitulo">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0" style="color: var(--primary-green);" id="modalNotificacoesTitulo">
+                    <i class="bi bi-bell me-2"></i>Notificações
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pt-0">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge rounded-pill" data-painel-selo></span>
+                </div>
+                <p class="mb-2" data-painel-texto></p>
+                <ul class="small text-muted mb-0 ps-3" data-painel-lista>
+                    <li>Músicas do culto definidas ou alteradas (quando você está escalado)</li>
+                    <li>Mudança de tom (para quem toca instrumento)</li>
+                    <li>Escala do mês publicada, com as suas datas</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4">
+                <button type="button" class="btn btn-light border rounded-pill px-3" data-notif="desativar" hidden>Desativar</button>
+                <button type="button" class="btn btn-outline-success rounded-pill px-3" data-notif="testar" hidden><i class="bi bi-send me-1"></i>Enviar teste</button>
+                <button type="button" class="btn-login btn-acao" data-notif="ativar" hidden><i class="bi bi-bell me-1"></i>Ativar notificações</button>
+            </div>
+        </div>
+    </div>
+</div>

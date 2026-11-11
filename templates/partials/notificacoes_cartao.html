@@ -1,20 +1,17 @@
 {% if VAPID_PUBLIC_KEY %}
-{# Preenchido pelo js/notificacoes.js conforme o aparelho (ativar, ativo, bloqueado, iPhone sem app...) #}
+{# Convite para ativar, só na tela inicial. Some ao ativar ou ao tocar em "Agora não" (o sino no topo continua disponível). #}
 <div class="table-card p-3 mb-4 cartao-notificacoes" id="cartaoNotificacoes" hidden>
     <div class="d-flex align-items-start gap-3">
         <div class="card-icon card-icon-sm flex-shrink-0"><i class="bi bi-bell text-success"></i></div>
         <div class="flex-grow-1" style="min-width: 0;">
-            <div class="fw-bold" data-notif-titulo>Receba os avisos do louvor</div>
-            <div class="small text-muted" data-notif-texto></div>
-            <div class="d-flex gap-2 mt-2 flex-wrap">
+            <div class="fw-bold" data-cartao-titulo>Receba os avisos do louvor</div>
+            <div class="small text-muted" data-cartao-texto>Músicas e tons do culto em que você está escalado e a escala do mês.</div>
+            <div class="d-flex gap-2 mt-2 flex-wrap" data-cartao-botoes>
                 <button type="button" class="btn btn-success btn-sm rounded-pill px-3" data-notif="ativar">
                     <i class="bi bi-bell me-1"></i>Ativar notificações
                 </button>
-                <button type="button" class="btn btn-outline-success btn-sm rounded-pill px-3" data-notif="testar" hidden>
-                    <i class="bi bi-send me-1"></i>Enviar teste
-                </button>
-                <button type="button" class="btn btn-light border btn-sm rounded-pill px-3" data-notif="desativar" hidden>
-                    Desativar
+                <button type="button" class="btn btn-light border btn-sm rounded-pill px-3" data-notif="dispensar">
+                    Agora não
                 </button>
             </div>
         </div>

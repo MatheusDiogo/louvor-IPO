@@ -1,4 +1,4 @@
-// Ativar/desativar as notificações deste aparelho e mantê-lo ligado ao usuário logado.
+// Notificações deste aparelho: convite na tela inicial, sino na barra do topo e vínculo com o usuário logado.
 (function () {
     const chavePublica = document.body.dataset.vapid;
     if (!chavePublica) return;  // notificações ainda não configuradas no servidor
@@ -7,6 +7,7 @@
     const ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const instalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const CHAVE_ENDPOINT = 'push-endpoint';
+    const CHAVE_DISPENSADO = 'notif-convite-dispensado';
 
     const ler = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
     const gravar = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* ok */ } };
@@ -41,47 +42,75 @@
         return resposta.ok;
     }
 
-    // ------------------------------------------------------------ cartão na tela inicial
+    // ------------------------------------------------------------ interface (sino, janela e convite)
+    const sino = document.getElementById('botaoNotificacoes');
+    const painel = document.getElementById('modalNotificacoes');
     const cartao = document.getElementById('cartaoNotificacoes');
+    let estadoAtual = 'inativo';
+
+    const TEXTOS = {
+        ativo: ['Ativadas neste aparelho', 'bg-success', 'Você recebe os avisos do louvor neste aparelho.'],
+        inativo: ['Desativadas', 'bg-secondary', 'Ative para receber os avisos do louvor neste aparelho:'],
+        bloqueado: ['Bloqueadas no aparelho', 'bg-danger',
+            'As notificações do Louvor IPO estão bloqueadas nas configurações do celular (ou do navegador). ' +
+            'Libere por lá e depois toque no sino de novo.'],
+        'ios-instalar': ['Instale o app', 'bg-warning text-dark',
+            'No iPhone as notificações só funcionam com o app instalado: toque em Compartilhar → ' +
+            '"Adicionar à Tela de Início" e ative pelo app.'],
+        'sem-suporte': ['Indisponíveis', 'bg-secondary',
+            'Este navegador não recebe notificações. Use o Chrome (Android) ou o app instalado no iPhone.'],
+    };
 
     function mostrar(estado) {
-        if (!cartao) return;
-        const titulo = cartao.querySelector('[data-notif-titulo]');
-        const texto = cartao.querySelector('[data-notif-texto]');
-        const botoes = { ativar: 'ativar', testar: 'testar', desativar: 'desativar' };
-        const ver = (nomes) => Object.keys(botoes).forEach(b => {
-            cartao.querySelector(`[data-notif="${b}"]`).hidden = !nomes.includes(b);
-        });
-        cartao.classList.toggle('notif-ativa', estado === 'ativo');
-        cartao.hidden = false;
-        if (estado === 'ativo') {
-            titulo.textContent = 'Notificações ativadas neste aparelho';
-            texto.textContent = 'Você vai receber os avisos das músicas do culto e da escala do mês.';
-            ver(['testar', 'desativar']);
-        } else if (estado === 'bloqueado') {
-            titulo.textContent = 'Notificações bloqueadas';
-            texto.textContent = 'Para receber os avisos, libere as notificações do Louvor IPO nas configurações do celular (ou do navegador) e recarregue a página.';
-            ver([]);
-        } else if (estado === 'ios-instalar') {
-            titulo.textContent = 'Receba os avisos no iPhone';
-            texto.textContent = 'No iPhone as notificações só funcionam com o app instalado: toque em Compartilhar → "Adicionar à Tela de Início" e abra o Louvor IPO por lá.';
-            ver([]);
-        } else if (estado === 'sem-suporte') {
-            titulo.textContent = 'Notificações indisponíveis';
-            texto.textContent = 'Este navegador não recebe notificações. Use o Chrome (Android) ou o app instalado no iPhone.';
-            ver([]);
-        } else {
-            titulo.textContent = 'Receba os avisos do louvor';
-            texto.textContent = 'Músicas e tons do culto em que você está escalado e a escala do mês.';
-            ver(['ativar']);
+        estadoAtual = estado;
+        const [selo, corSelo, texto] = TEXTOS[estado];
+
+        if (sino) {
+            const icone = sino.querySelector('i');
+            icone.className = estado === 'ativo' ? 'bi bi-bell-fill text-success'
+                : estado === 'bloqueado' ? 'bi bi-bell-slash' : 'bi bi-bell';
+            sino.title = estado === 'ativo' ? 'Notificações ativadas' : 'Notificações desativadas';
+            sino.hidden = false;
         }
+        if (painel) {
+            const elSelo = painel.querySelector('[data-painel-selo]');
+            elSelo.className = `badge rounded-pill ${corSelo}`;
+            elSelo.textContent = selo;
+            painel.querySelector('[data-painel-texto]').textContent = texto;
+            painel.querySelector('[data-painel-lista]').hidden = !['ativo', 'inativo'].includes(estado);
+            painel.querySelector('[data-notif="ativar"]').hidden = estado !== 'inativo';
+            painel.querySelector('[data-notif="desativar"]').hidden = estado !== 'ativo';
+            painel.querySelector('[data-notif="testar"]').hidden = estado !== 'ativo';
+        }
+        // Convite na tela inicial: só para quem ainda pode ativar e não dispensou
+        if (cartao && !cartao.dataset.mensagem) {
+            const convidar = (estado === 'inativo' || estado === 'ios-instalar') && ler(CHAVE_DISPENSADO) !== '1';
+            cartao.hidden = !convidar;
+            if (convidar && estado === 'ios-instalar') {
+                cartao.querySelector('[data-cartao-texto]').textContent = TEXTOS['ios-instalar'][2];
+                cartao.querySelector('[data-notif="ativar"]').hidden = true;
+            }
+        }
+    }
+
+    // Mensagem rápida no lugar do convite antes de ele sumir
+    function avisoNoCartao(titulo, texto) {
+        if (!cartao || cartao.hidden) return;
+        cartao.dataset.mensagem = '1';
+        cartao.querySelector('[data-cartao-titulo]').textContent = titulo;
+        cartao.querySelector('[data-cartao-texto]').textContent = texto;
+        cartao.querySelector('[data-cartao-botoes]').hidden = true;
+        setTimeout(() => { cartao.hidden = true; }, 4000);
     }
 
     async function ativar(botao) {
         botao.disabled = true;
         try {
             const permissao = await Notification.requestPermission();
-            if (permissao !== 'granted') { mostrar(permissao === 'denied' ? 'bloqueado' : 'inativo'); return; }
+            if (permissao !== 'granted') {
+                mostrar(permissao === 'denied' ? 'bloqueado' : 'inativo');
+                return;
+            }
             const registro = await navigator.serviceWorker.ready;
             let inscricao = await registro.pushManager.getSubscription();
             if (inscricao && !mesmaChave(inscricao)) { await inscricao.unsubscribe(); inscricao = null; }
@@ -89,8 +118,10 @@
                 inscricao = await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveEmBytes(chavePublica) });
             }
             if (!(await registrarNoServidor(inscricao))) throw new Error('servidor');
+            gravar(CHAVE_DISPENSADO, null);
+            avisoNoCartao('Notificações ativadas ✅', 'Enviamos uma notificação de teste para este aparelho.');
             mostrar('ativo');
-            postar('/notificacoes/testar/');  // confirma com uma notificação de teste
+            postar('/notificacoes/testar/');  // teste automático confirma que chegou
         } catch (erro) {
             alert('Não foi possível ativar as notificações agora. Verifique a internet e tente de novo.');
             mostrar('inativo');
@@ -100,28 +131,33 @@
     }
 
     async function desativar() {
-        const inscricao = await inscricaoAtual();
+        const inscricao = await inscricaoAtual().catch(() => null);
         if (inscricao) {
             await postar('/notificacoes/cancelar/', { endpoint: inscricao.endpoint }).catch(() => null);
             await inscricao.unsubscribe().catch(() => null);
         }
         gravar(CHAVE_ENDPOINT, null);
+        gravar(CHAVE_DISPENSADO, '1');  // quem desativou não precisa ver o convite de novo
         mostrar('inativo');
     }
 
-    if (cartao) {
-        cartao.addEventListener('click', e => {
-            const acao = e.target.closest('[data-notif]');
-            if (!acao) return;
-            if (acao.dataset.notif === 'ativar') ativar(acao);
-            if (acao.dataset.notif === 'desativar') desativar();
-            if (acao.dataset.notif === 'testar') {
-                postar('/notificacoes/testar/').then(r => r.json()).then(d => {
-                    if (!d.ok) alert('Não chegou nenhuma notificação. Desative e ative de novo.');
-                });
-            }
-        });
-    }
+    document.addEventListener('click', e => {
+        const acao = e.target.closest('[data-notif]');
+        if (!acao) return;
+        const tipo = acao.dataset.notif;
+        if (tipo === 'ativar') ativar(acao);
+        if (tipo === 'desativar') desativar();
+        if (tipo === 'dispensar') {
+            gravar(CHAVE_DISPENSADO, '1');
+            avisoNoCartao('Tudo bem!', 'Se mudar de ideia, toque no sino 🔔 no topo da tela.');
+        }
+        if (tipo === 'testar') {
+            acao.disabled = true;
+            postar('/notificacoes/testar/').then(r => r.json()).then(d => {
+                if (!d.ok) alert('Não chegou nenhuma notificação. Desative e ative de novo.');
+            }).finally(() => { acao.disabled = false; });
+        }
+    });
 
     // ------------------------------------------------------------ estado inicial e sincronização
     (async () => {

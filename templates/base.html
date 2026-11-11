@@ -28,6 +28,13 @@
             <span class="text-muted small text-truncate nav-user">
                 <i class="bi bi-person-circle me-1"></i>{{ user.first_name|default:user.username }}
             </span>
+            {% if VAPID_PUBLIC_KEY %}
+            {# Aparece quando o js/notificacoes.js descobre o estado deste aparelho #}
+            <button type="button" class="btn btn-sm btn-light border" id="botaoNotificacoes" hidden
+                    data-bs-toggle="modal" data-bs-target="#modalNotificacoes" title="Notificações" aria-label="Notificações">
+                <i class="bi bi-bell"></i>
+            </button>
+            {% endif %}
             <a href="{% url 'ajuda' %}" class="btn btn-sm btn-light border" title="Ajuda" aria-label="Ajuda">
                 <i class="bi bi-question-circle"></i>
             </a>
@@ -63,6 +70,7 @@
 {% endblock %}
 
 </main>
+{% if user.is_authenticated and VAPID_PUBLIC_KEY %}{% include "partials/notificacoes_modal.html" %}{% endif %}
 {# Antes do script.js, que lê esta lista para guardar as páginas no celular #}
 {% if urls_offline %}{{ urls_offline|json_script:"urlsOffline" }}{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

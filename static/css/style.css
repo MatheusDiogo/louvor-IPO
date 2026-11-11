@@ -933,3 +933,11 @@ main.container {
     background: #f8faf9;
     box-shadow: none;
 }
+
+/* Celulares estreitos: esconde o nome na barra do topo (ele já aparece no "Bem-vindo")
+   para logo, sino, ajuda e sair caberem numa linha só */
+@media (max-width: 420px) {
+    .nav-user {
+        display: none;
+    }
+}
