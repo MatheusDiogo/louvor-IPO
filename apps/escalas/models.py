@@ -37,8 +37,12 @@ class EscalaMusica(models.Model):
     # Tom em que a música será tocada neste culto (a cifra é transposta automaticamente)
     tom = models.CharField(max_length=10, blank=True)
 
+    # Posição da música no culto (o ministrante e os líderes podem reordenar)
+    ordem = models.PositiveIntegerField(default=0)
+
     class Meta:
         unique_together = ('escala', 'musica')
+        ordering = ['ordem', 'id']
 
     def __str__(self):
         return f"{self.musica.nome} ({self.tom}) na escala de {self.escala.data}"

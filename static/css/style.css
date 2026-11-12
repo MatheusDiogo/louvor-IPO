@@ -941,3 +941,8 @@ main.container {
         display: none;
     }
 }
+
+/* Mudar ordem das músicas do culto: destaca o item que acabou de mover */
+#listaOrdem .item-ordem { transition: background-color .4s; }
+#listaOrdem .item-movido { background-color: #dcfce7; }
+#listaOrdem .btn-mover { width: 34px; height: 34px; padding: 0; flex-shrink: 0; }

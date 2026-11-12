@@ -130,7 +130,7 @@ def _tom_valido(valor, musica):
 def escala_detalhe(request, pk):
     """Gerenciar as músicas do culto (e o tom de cada uma)."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = list(escala.itens.select_related('musica').order_by('id'))
+    itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
     for item in itens:
         opcoes = opcoes_de_tom(item.musica.tom)
         item.opcoes_tom = opcoes if not item.tom or item.tom in opcoes else [item.tom] + opcoes
@@ -172,7 +172,9 @@ def escala_musica_adicionar(request, pk):
     if EscalaMusica.objects.filter(escala=escala, musica=musica).exists():
         messages.error(request, f'"{musica.nome}" já está neste culto.')
     else:
-        item = EscalaMusica.objects.create(escala=escala, musica=musica, tom=_tom_valido(request.POST.get('tom', ''), musica))
+        ultima = escala.itens.aggregate(m=Max('ordem'))['m'] or 0  # nova música entra no fim
+        item = EscalaMusica.objects.create(escala=escala, musica=musica, ordem=ultima + 1,
+                                           tom=_tom_valido(request.POST.get('tom', ''), musica))
         messages.success(request, f'"{musica.nome}" adicionada!')
         total = escala.itens.count()
         if avisos.repertorio_adicionado(escala, item, total) and total == avisos.MUSICAS_PARA_AVISAR:
@@ -209,6 +211,37 @@ def escala_musica_excluir(request, item_pk):
     return redirect('escala_detalhe', pk=escala_pk)
 
 
+def pode_ordenar(usuario, escala):
+    """Quem ministra o culto e os líderes podem mudar a ordem das músicas."""
+    return usuario.is_lider or escala.ministrante_id == usuario.id
+
+
+@login_required
+@require_POST
+def escala_musicas_ordem(request, pk):
+    """Salva a nova ordem das músicas do culto (lista de ids dos itens, na ordem desejada)."""
+    escala = get_object_or_404(Escala, pk=pk)
+    if not pode_ordenar(request.user, escala):
+        messages.error(request, 'Só quem ministra o culto (ou um líder) pode mudar a ordem das músicas.')
+        return redirect('escala_visualizar', pk=pk)
+
+    itens = {item.pk: item for item in escala.itens.all()}
+    enviados = [int(i) for i in request.POST.getlist('item') if i.isdigit()]
+    # Só aceita se vierem exatamente as músicas do culto (evita perder alguma adicionada nesse meio-tempo)
+    if sorted(enviados) != sorted(itens):
+        messages.error(request, 'As músicas do culto mudaram enquanto você reordenava. Confira e tente de novo.')
+    else:
+        for posicao, item_pk in enumerate(enviados, start=1):
+            itens[item_pk].ordem = posicao
+        EscalaMusica.objects.bulk_update(itens.values(), ['ordem'])
+        messages.success(request, 'Ordem das músicas atualizada.')
+
+    proximo = request.POST.get('next', '')
+    if url_has_allowed_host_and_scheme(proximo, allowed_hosts={request.get_host()}):
+        return redirect(proximo)
+    return redirect('escala_visualizar', pk=pk)
+
+
 def _equipe(escala):
     """Equipe do culto agrupada por instrumento, na ordem das colunas da escala."""
     equipe = defaultdict(list)
@@ -221,7 +254,7 @@ def _equipe(escala):
 def escala_visualizar(request, pk):
     """Visualização do culto (somente leitura): equipe e músicas."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = escala.itens.select_related('musica').order_by('id')
+    itens = escala.itens.select_related('musica').order_by('ordem', 'id')
     equipe = _equipe(escala)
     minhas_funcoes = [inst.nome for inst, usuarios in equipe.items() if request.user in usuarios]
 
@@ -230,6 +263,7 @@ def escala_visualizar(request, pk):
         'itens': itens,
         'equipe': list(equipe.items()),
         'minhas_funcoes': minhas_funcoes,
+        'pode_ordenar': pode_ordenar(request.user, escala),
     })
 
 
@@ -237,7 +271,7 @@ def escala_visualizar(request, pk):
 def escala_cifras(request, pk):
     """Todas as cifras do culto, uma após a outra, já no tom escolhido (para tocar pelo celular)."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = list(escala.itens.select_related('musica').order_by('id'))
+    itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
     for item in itens:
         item.cifra_html = renderizar_html(item.musica.cifra, item.musica.tom, item.tom)
     return render(request, 'escalas/escala_cifras.html', {'escala': escala, 'itens': itens})
@@ -247,7 +281,7 @@ def escala_cifras(request, pk):
 def escala_pdf(request, pk):
     """PDF com o repertório do culto (cada música no tom escolhido)."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = escala.itens.select_related('musica').order_by('id')
+    itens = escala.itens.select_related('musica').order_by('ordem', 'id')
     titulo = f'Culto {escala.data:%d/%m/%Y}'
     pdf = gerar_pdf([
         {

@@ -55,6 +55,11 @@
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
         <h6 class="fw-bold mb-0 me-auto" style="color: var(--primary-green);"><i class="bi bi-music-note-list me-2"></i>Músicas</h6>
         {% if itens %}
+        {% if pode_ordenar and itens|length > 1 %}
+        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalOrdem">
+            <i class="bi bi-arrow-down-up me-1"></i>Mudar ordem
+        </button>
+        {% endif %}
         <a href="{% url 'escala_cifras' escala.pk %}" class="btn btn-success btn-sm rounded-pill px-3">
             <i class="bi bi-collection-play me-1"></i>Todas as cifras
         </a>
@@ -101,4 +106,6 @@
         {% endfor %}
     </div>
 </div>
+
+{% if pode_ordenar and itens|length > 1 %}{% include "escalas/_modal_ordem.html" %}{% endif %}
 {% endblock %}

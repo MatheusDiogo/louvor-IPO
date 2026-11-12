@@ -1,0 +1,87 @@
+{# Modal para mudar a ordem das músicas do culto (ministrante e líderes). Requer: escala, itens #}
+<div class="modal fade" id="modalOrdem" tabindex="-1" aria-labelledby="tituloOrdem">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'escala_musicas_ordem' escala.pk %}" id="formOrdem">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" id="tituloOrdem" style="color: var(--primary-green);">
+                        <i class="bi bi-arrow-down-up me-2"></i>Ordem das músicas
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body px-4">
+                    <p class="small text-muted mb-3">Use as setas para subir ou descer cada música.</p>
+                    <ol class="list-group list-group-numbered" id="listaOrdem">
+                        {% for item in itens %}
+                        <li class="list-group-item d-flex align-items-center gap-2 item-ordem" data-id="{{ item.pk }}">
+                            <input type="hidden" name="item" value="{{ item.pk }}">
+                            <span class="flex-grow-1 text-break-word" style="min-width: 0;">
+                                {{ item.musica.nome }}
+                                {% if item.tom %}<span class="badge rounded-pill bg-light text-success border ms-1">{{ item.tom }}</span>{% endif %}
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-circle btn-mover" data-direcao="-1" aria-label="Subir {{ item.musica.nome }}">
+                                <i class="bi bi-chevron-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-circle btn-mover" data-direcao="1" aria-label="Descer {{ item.musica.nome }}">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login btn-acao" id="btnSalvarOrdem" disabled>Salvar ordem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    const lista = document.getElementById('listaOrdem');
+    const salvar = document.getElementById('btnSalvarOrdem');
+    const ordemAtual = () => Array.from(lista.children, li => li.dataset.id).join(',');
+    const original = ordemAtual();
+
+    // Primeira não sobe, última não desce
+    const atualizar = () => {
+        const itens = Array.from(lista.children);
+        itens.forEach((li, i) => {
+            li.querySelector('[data-direcao="-1"]').disabled = i === 0;
+            li.querySelector('[data-direcao="1"]').disabled = i === itens.length - 1;
+        });
+        salvar.disabled = ordemAtual() === original;
+    };
+
+    lista.addEventListener('click', e => {
+        const botao = e.target.closest('.btn-mover');
+        if (!botao) return;
+        const li = botao.closest('li');
+        if (botao.dataset.direcao === '-1' && li.previousElementSibling) {
+            lista.insertBefore(li, li.previousElementSibling);
+        } else if (botao.dataset.direcao === '1' && li.nextElementSibling) {
+            lista.insertBefore(li.nextElementSibling, li);
+        }
+        atualizar();
+        // Mantém o foco no botão para poder tocar várias vezes seguidas
+        botao.disabled ? li.querySelector('.btn-mover:not(:disabled)')?.focus() : botao.focus();
+        li.classList.add('item-movido');
+        setTimeout(() => li.classList.remove('item-movido'), 400);
+    });
+
+    // Ao cancelar, volta para a ordem salva
+    document.getElementById('modalOrdem').addEventListener('hidden.bs.modal', () => {
+        original.split(',').forEach(id => lista.appendChild(lista.querySelector(`[data-id="${id}"]`)));
+        atualizar();
+    });
+
+    atualizar();
+})();
+</script>
