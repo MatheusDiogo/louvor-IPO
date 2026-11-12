@@ -1043,8 +1043,6 @@ main.container {
 .acorde-svg .acorde-casa-inicial { fill: #6c757d; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
 .acorde-svg .acorde-marca { fill: #6c757d; font-size: 9px; text-anchor: middle; font-family: system-ui, sans-serif; }
 .acorde-svg .acorde-solta { fill: none; stroke: #6c757d; stroke-width: 1; }
-.acorde-svg .acorde-solta-cheia { fill: #1a2e1a; }
-.acorde-svg .acorde-quinta { fill: #fff; stroke: #166534; stroke-width: 1.4; }
 
 /* Teclado: baixo (mão esquerda) e notas do acorde (mão direita) */
 .acorde-teclado .tecla-branca { fill: #fff; stroke: #9aa5a0; stroke-width: 0.8; }

@@ -1,4 +1,4 @@
-// Desenhos dos acordes em cima de cada cifra: violão, baixo ou teclado.
+// Desenhos dos acordes em cima de cada cifra: violão ou teclado.
 // Os dados vêm do servidor (apps/musicas/acordes.py) dentro da própria página, então funciona sem internet.
 //
 // Qual instrumento aparece:
@@ -14,7 +14,7 @@
     };
     const gravar = (chave, valor) => { try { localStorage.setItem(chave, valor); } catch (e) { /* sem armazenamento */ } };
 
-    const INSTRUMENTOS = ['violao', 'baixo', 'teclado'];
+    const INSTRUMENTOS = ['violao', 'teclado'];
     const NS = 'http://www.w3.org/2000/svg';
     const SUSTENIDOS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const BEMOIS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -28,8 +28,8 @@
         return e;
     }
 
-    // ------------------------------------------------------------ braço (violão: 6 cordas, baixo: 4)
-    // marcas: [{corda, casa, tipo: 'dedo'|'quinta', texto}], casas: valor por corda (-1 = ×, 0 = ○, null = nada)
+    // ------------------------------------------------------------ braço do violão
+    // marcas: [{corda, casa, texto}] (dedos apertados); embaixo: valor por corda (-1 = ×, 0 = ○, null = nada)
     function braco({ cordas, inicio, visiveis, marcas, pestanas = [], embaixo = [] }) {
         const DX = 11, DY = 14, ESQ = 16, TOPO = 8;
         const largura = ESQ + DX * (cordas - 1) + 8, altura = TOPO + DY * visiveis + 16;
@@ -49,12 +49,8 @@
             svg.appendChild(el('rect', { x: x(de) - 4.5, y: y(casa) - 4.5, width: x(ate) - x(de) + 9, height: 9,
                                          rx: 4.5, class: 'acorde-dedo' }));
         });
-        marcas.forEach(({ corda, casa, tipo, texto }) => {
-            if (casa === 0) {  // corda solta: marca em cima do braço
-                svg.appendChild(el('circle', { cx: x(corda), cy: TOPO - 4.5, r: 3, class: tipo === 'quinta' ? 'acorde-solta' : 'acorde-solta-cheia' }));
-                return;
-            }
-            svg.appendChild(el('circle', { cx: x(corda), cy: y(casa), r: 4.8, class: tipo === 'quinta' ? 'acorde-quinta' : 'acorde-dedo' }));
+        marcas.forEach(({ corda, casa, texto }) => {
+            svg.appendChild(el('circle', { cx: x(corda), cy: y(casa), r: 4.8, class: 'acorde-dedo' }));
             if (texto) svg.appendChild(el('text', { x: x(corda), y: y(casa) + 2.6, class: 'acorde-dedo-num' }, texto));
         });
         embaixo.forEach((valor, corda) => {
@@ -80,33 +76,9 @@
             for (let i = de; i <= ate; i++) if (casas[i] === casa) naPestana.add(i);
             barras.push({ casa, de, ate });
         });
-        const marcas = casas.map((casa, corda) => ({ corda, casa, tipo: 'dedo', texto: dedos[corda] || '' }))
+        const marcas = casas.map((casa, corda) => ({ corda, casa, texto: dedos[corda] || '' }))
             .filter(m => m.casa > 0 && !naPestana.has(m.corda));
         return braco({ cordas: 6, inicio, visiveis: 4, marcas, pestanas: barras, embaixo: casas.map(c => (c > 0 ? null : c)) });
-    }
-
-    // Baixo (4 cordas: Mi Lá Ré Sol). Regiões do braço para o "Variar"; na região, todas as posições da nota.
-    const AFINACAO_BAIXO = [4, 9, 2, 7];
-    const REGIOES_BAIXO = [1, 5, 9];
-    function regioesBaixo(nota) {
-        return REGIOES_BAIXO.filter(inicio => AFINACAO_BAIXO.some(corda => {
-            for (let casa = inicio === 1 ? 0 : inicio; casa < inicio + 5; casa++) if ((corda + casa) % 12 === nota) return true;
-            return false;
-        }));
-    }
-    function desenhoBaixo(acorde, inicio) {
-        const quinta = acorde.notas.length > 2 && acorde.notas[0] === acorde.baixo ? acorde.notas[2] : null;
-        const marcas = [];
-        AFINACAO_BAIXO.forEach((corda, i) => {
-            for (let casa = inicio === 1 ? 0 : inicio; casa < inicio + 5; casa++) {
-                const nota = (corda + casa) % 12;
-                if (nota === acorde.baixo) marcas.push({ corda: i, casa, tipo: 'dedo' });
-                else if (quinta !== null && nota === quinta && (acorde.notas[2] - acorde.notas[0] + 12) % 12 === 7) {
-                    marcas.push({ corda: i, casa, tipo: 'quinta' });
-                }
-            }
-        });
-        return braco({ cordas: 4, inicio, visiveis: 5, marcas });
     }
 
     // Teclado: duas oitavas. Mão esquerda (1ª oitava) = baixo; mão direita (2ª oitava) = notas do acorde.
@@ -164,11 +136,6 @@
             if (!acorde.desenhos || !acorde.desenhos.length) return semDesenho('sem desenho');
             opcoes = acorde.desenhos;
             desenhar = i => desenhoViolao(opcoes[i]);
-        } else if (instrumento === 'baixo') {
-            if (!temNotas) return semDesenho('sem desenho');
-            opcoes = regioesBaixo(acorde.baixo);
-            desenhar = i => desenhoBaixo(acorde, opcoes[i]);
-            legenda = () => 'Toque ' + nomeNota(acorde.baixo, acorde.nome);
         } else {
             if (!temNotas || acorde.tipo_conhecido === false) return semDesenho('sem desenho');
             opcoes = [0];

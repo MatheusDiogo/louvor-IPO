@@ -17,7 +17,6 @@ class Instrumento(models.Model):
     DESENHOS = [
         ('', 'Não definido'),
         ('violao', 'Violão / guitarra'),
-        ('baixo', 'Baixo'),
         ('teclado', 'Teclado'),
         ('nenhum', 'Nenhum (ex.: voz)'),
     ]

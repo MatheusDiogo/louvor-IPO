@@ -83,7 +83,7 @@ ROTULOS_TIPOS = {
     'm9': 'm7(9)', 'm11': 'm7(11)', 'mmaj7': 'm(7M)', 'mmaj7b5': 'm(7M b5)', 'mmaj9': 'm(7M 9)', 'mmaj11': 'm(7M 11)',
 }
 
-# Notas de cada tipo de acorde, em semitons a partir da fundamental (usado no baixo e no teclado)
+# Notas de cada tipo de acorde, em semitons a partir da fundamental (usado no teclado)
 FORMULAS = {
     'major': [0, 4, 7], 'minor': [0, 3, 7], 'dim': [0, 3, 6], 'dim7': [0, 3, 6, 9], 'aug': [0, 4, 8],
     '5': [0, 7], 'add11': [0, 4, 7, 17], 'madd11': [0, 3, 7, 17], 'sus4add9': [0, 5, 7, 14],
@@ -281,7 +281,7 @@ def desenhos_violao(nomes_acordes, nomes=None):
             resultado[nome] = {'desenhos': [], 'aviso': 'Sem desenho para este acorde', 'notas': [], 'baixo': None}
             continue
         raiz, tipo, baixo = analise
-        # Para o baixo e o teclado: notas do acorde e a nota mais grave (o baixo, ou a fundamental)
+        # Para o teclado: notas do acorde e a nota mais grave (o baixo, ou a fundamental)
         musical = {'notas': notas_do_acorde(raiz, tipo) if tipo else [raiz],
                    'baixo': baixo if baixo is not None else raiz, 'tipo_conhecido': bool(tipo)}
         if not tipo:
@@ -310,7 +310,7 @@ def desenhos_violao(nomes_acordes, nomes=None):
     return resultado
 
 
-INSTRUMENTOS_COM_DESENHO = ('violao', 'baixo', 'teclado')
+INSTRUMENTOS_COM_DESENHO = ('violao', 'teclado')
 
 
 def desenho_do_cadastro(usuario):
