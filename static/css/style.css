@@ -956,3 +956,84 @@ main.container {
 #listaOrdem .item-ordem { transition: background-color .4s; }
 #listaOrdem .item-movido { background-color: #dcfce7; }
 #listaOrdem .btn-mover { width: 34px; height: 34px; padding: 0; flex-shrink: 0; }
+
+/* ---------------------------------------------------------------- Desenhos dos acordes (violão) */
+.acordes-faixa {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    scrollbar-width: thin;
+}
+
+.acordes-bloco {
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;            /* não acompanha o tamanho da letra (A− / A+) */
+}
+
+.acordes-alternar {
+    border: 0;
+    background: none;
+    padding: 0 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.acordes-alternar[aria-expanded="false"] .acordes-seta { transform: rotate(180deg); }
+
+.acorde-item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 78px;
+}
+
+.acorde-nome {
+    font-weight: 700;
+    color: var(--primary-green);
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+.acorde-botao {
+    border: 1px solid transparent;
+    background: none;
+    border-radius: 10px;
+    padding: 2px 4px;
+    line-height: 0;
+    cursor: pointer;
+}
+
+.acorde-botao:hover, .acorde-botao:focus-visible {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.acorde-svg .acorde-traste { stroke: #9aa5a0; stroke-width: 1; }
+.acorde-svg .acorde-pestana-fixa { stroke: #1a2e1a; stroke-width: 3; }
+.acorde-svg .acorde-corda { stroke: #9aa5a0; stroke-width: 1; }
+.acorde-svg .acorde-dedo { fill: #1a2e1a; }
+.acorde-botao.gerado .acorde-svg .acorde-dedo { fill: #166534; }
+.acorde-svg .acorde-dedo-num { fill: #fff; font-size: 7px; font-weight: 700; text-anchor: middle; font-family: system-ui, sans-serif; }
+.acorde-svg .acorde-casa-inicial { fill: #6c757d; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
+.acorde-svg .acorde-marca { fill: #6c757d; font-size: 9px; text-anchor: middle; font-family: system-ui, sans-serif; }
+.acorde-svg .acorde-solta { fill: none; stroke: #6c757d; stroke-width: 1; }
+
+.acorde-variar, .acorde-aviso, .acorde-vazio {
+    font-size: 10.5px;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+.acorde-aviso { color: #b45309; }
+.acorde-vazio { padding: 22px 0; font-style: italic; }
+
+.cifra-leitor.sem-diagramas .acordes-faixa,
+.cifra-leitor.sem-acordes .acordes-bloco {
+    display: none;
+}
+
+.cifra-leitor.sem-diagramas .acordes-bloco { border-bottom: 0; margin-bottom: 4px; }

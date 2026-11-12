@@ -12,6 +12,7 @@ from .models import Escala, EscalaMusica, EscalaIntegrante
 from apps.musicas.cifra import (
     TONS_MAIORES, TONS_MENORES, letra_para_busca, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base,
 )
+from apps.musicas.acordes import diagramas_da_musica, mapa_de_nomes
 from apps.musicas.cifra_pdf import gerar_pdf
 from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
@@ -274,8 +275,10 @@ def escala_cifras(request, pk):
     """Todas as cifras do culto, uma após a outra, já no tom escolhido (para tocar pelo celular)."""
     escala = get_object_or_404(Escala, pk=pk)
     itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
+    nomes = mapa_de_nomes()
     for item in itens:
         item.cifra_html = renderizar_html(item.musica.cifra, item.musica.tom, item.tom)
+        item.diagramas = diagramas_da_musica(item.musica.cifra, item.musica.tom, item.tom, nomes)
     return render(request, 'escalas/escala_cifras.html', {'escala': escala, 'itens': itens})
 
 

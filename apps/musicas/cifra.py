@@ -215,6 +215,34 @@ def ler_chordpro(texto):
     return cifra
 
 
+def acordes_usados(texto, tom_original='', tom_destino=''):
+    """Acordes da música (sem repetir, na ordem em que aparecem), já no tom de destino.
+
+    Inclui os acordes escritos nas anotações ("Intro: E A9 B").
+    """
+    cifra = ler_chordpro(texto)
+    tom_original = tom_original or cifra.tom
+    semitons = semitons_entre(tom_original, tom_destino) if tom_destino else 0
+    bemol = usa_bemol(tom_destino or tom_original)
+    transpor = bool(semitons) or (tom_destino and tom_base(tom_destino) != tom_base(tom_original))
+
+    textos = []
+    for linha in cifra.linhas:
+        if linha.tipo == 'comentario':
+            textos.append(linha.texto)
+        elif linha.tipo == 'letra':
+            textos.extend(a for a, _ in linha.partes if a)
+            textos.extend(l for _, l in linha.partes if isinstance(l, Comentario))
+    vistos = []
+    for texto_acordes in textos:
+        for token in TOKEN_RE.findall(texto_acordes):
+            if eh_acorde(token):
+                nome = transpor_acorde(token, semitons, bemol) if transpor else token
+                if nome not in vistos:
+                    vistos.append(nome)
+    return vistos
+
+
 def letra_para_busca(texto, limite=4000):
     """Só a letra da música (sem acordes, diretivas e comentários), numa linha, para buscas."""
     partes = []

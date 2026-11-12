@@ -1,0 +1,10 @@
+{# Faixa com os diagramas dos acordes da música (desenhada pelo static/js/acordes.js). Requer: diagramas, id #}
+{% if diagramas %}{% with id_txt=id|stringformat:"s" %}{% with id_script="diagramas-"|add:id_txt %}
+<div class="acordes-bloco">
+    <button type="button" class="acordes-alternar" data-diagramas-botao aria-expanded="true">
+        <i class="bi bi-grid-3x3-gap me-1"></i>Desenhos dos acordes <i class="bi bi-chevron-up acordes-seta"></i>
+    </button>
+    <div class="acordes-faixa" data-diagramas="{{ id_script }}" role="list" aria-label="Acordes da música"></div>
+</div>
+{{ diagramas|json_script:id_script }}
+{% endwith %}{% endwith %}{% endif %}

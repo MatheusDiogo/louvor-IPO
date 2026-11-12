@@ -11,6 +11,7 @@ from .cifra import (
     converter_cifra_comum, extrair_metadados, normalizar_tom, opcoes_de_tom,
     letra_para_busca, parece_chordpro, renderizar_html, tom_base,
 )
+from .acordes import diagramas_da_musica
 from .cifra_pdf import gerar_pdf
 from .models import Musica
 
@@ -43,6 +44,7 @@ def detalhes_musica(request, musica_id):
         'tom': tom,
         'opcoes_tom': opcoes,
         'cifra_html': renderizar_html(musica.cifra, musica.tom, tom),
+        'diagramas': diagramas_da_musica(musica.cifra, musica.tom, tom),
     })
 
 
