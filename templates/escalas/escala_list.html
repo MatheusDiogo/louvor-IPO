@@ -16,9 +16,29 @@
         {% endif %}
     </div>
 
-    <div class="d-flex flex-column gap-3">
+    {% if escalas %}
+    <!-- Filtro: todos os cultos ou só aqueles em que estou escalado -->
+    <div class="btn-group btn-group-sm mb-3 filtro-cultos" role="group" aria-label="Quais cultos mostrar">
+        <input type="radio" class="btn-check" name="filtroCultos" id="filtroTodos" value="todos" autocomplete="off" checked>
+        <label class="btn btn-outline-success rounded-start-pill px-3" for="filtroTodos">
+            Todos <span class="opacity-75">({{ escalas|length }})</span>
+        </label>
+        <input type="radio" class="btn-check" name="filtroCultos" id="filtroMeus" value="meus" autocomplete="off">
+        <label class="btn btn-outline-success rounded-end-pill px-3" for="filtroMeus">
+            <i class="bi bi-person-check me-1"></i>Só os meus <span class="opacity-75">({{ total_meus }})</span>
+        </label>
+    </div>
+    {% endif %}
+
+    <div class="d-flex flex-column gap-3" id="listaCultos">
+        {% if escalas %}
+        <div class="table-card text-center py-5 text-muted" id="semMeusCultos" hidden>
+            <i class="bi bi-calendar-check d-block fs-2 mb-2 opacity-50"></i>
+            Você não está escalado em nenhum dos próximos cultos.
+        </div>
+        {% endif %}
         {% for escala in escalas %}
-        <div class="table-card p-3 p-md-4">
+        <div class="table-card p-3 p-md-4 item-culto" {% if escala.minhas_funcoes or escala.eu_ministro %}data-meu="1"{% endif %}>
             <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
                 <a href="{% url 'escala_visualizar' escala.pk %}" class="d-flex align-items-center gap-3 flex-grow-1 text-decoration-none text-dark" style="min-width: 0;">
                     <div class="card-icon mb-0 flex-column lh-1 text-success fw-bold" style="font-size: 1.25rem;">
@@ -117,6 +137,34 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(() => {
+    // Filtro "Todos / Só os meus" (a escolha fica guardada neste aparelho)
+    const opcoes = document.querySelectorAll('input[name="filtroCultos"]');
+    if (!opcoes.length) return;
+    const CHAVE = 'louvor-filtro-cultos';
+    const aplicar = valor => {
+        const meus = valor === 'meus';
+        let visiveis = 0;
+        document.querySelectorAll('.item-culto').forEach(card => {
+            const mostrar = !meus || card.dataset.meu === '1';
+            card.hidden = !mostrar;
+            if (mostrar) visiveis++;
+        });
+        document.getElementById('semMeusCultos').hidden = visiveis > 0;
+    };
+    let salvo = 'todos';
+    try { salvo = localStorage.getItem(CHAVE) || 'todos'; } catch (e) {}
+    opcoes.forEach(opcao => {
+        opcao.checked = opcao.value === salvo;
+        opcao.addEventListener('change', () => {
+            aplicar(opcao.value);
+            try { localStorage.setItem(CHAVE, opcao.value); } catch (e) {}
+        });
+    });
+    aplicar(salvo);
+})();
+</script>
 {% if user.is_lider %}
 <script>
     const urlEditarEscala = "{% url 'escala_editar' 0 %}";

@@ -96,3 +96,57 @@ def escala_publicada(inicio, fim, nome_mes):
             corpo = 'Você não está escalado este mês. Toque para ver a escala completa.'
         mensagens[usuario.pk] = (titulo, corpo)
     return servico.enviar_personalizado(mensagens, url='/escalas/', tag=f'escala-{inicio:%Y-%m}')
+
+
+# ---------------------------------------------------------------- 6. escala alterada depois de publicada
+
+def retrato_escalas(escala_ids):
+    """Como estão os cultos agora: {id do culto: ({usuário: instrumento}, ministrante)}."""
+    from apps.escalas.models import Escala, EscalaIntegrante
+
+    retrato = {pk: ({}, ministrante) for pk, ministrante in
+               Escala.objects.filter(pk__in=escala_ids).values_list('pk', 'ministrante_id')}
+    for escala_id, usuario_id, instrumento_id in (EscalaIntegrante.objects.filter(escala_id__in=escala_ids)
+                                                  .values_list('escala_id', 'usuario_id', 'instrumento_id')):
+        retrato[escala_id][0][usuario_id] = instrumento_id
+    return retrato
+
+
+def escala_alterada(escalas, antes, depois, autor=None):
+    """Depois de salvar a escala: avisa só quem teve a sua escala mudada (entrou, saiu, trocou de
+    instrumento ou de ministração). Só para cultos futuros de meses já publicados — antes da
+    publicação, o aviso geral do "Publicar escala" já conta tudo. Quem salvou não é avisado."""
+    from apps.escalas.models import PublicacaoEscala
+    from apps.instrumentos.models import Instrumento
+
+    publicados = set(PublicacaoEscala.objects.values_list('mes', flat=True))
+    nomes = dict(Instrumento.objects.values_list('pk', 'nome'))
+    frases = {}  # usuário -> ["Culto de 16/11: você foi escalado em Violão e vai ministrar", ...]
+
+    for escala in sorted(escalas, key=lambda e: e.data):
+        if not _culto_futuro(escala) or escala.data.replace(day=1) not in publicados:
+            continue
+        equipe_antes, ministrante_antes = antes.get(escala.pk, ({}, None))
+        equipe_depois, ministrante_depois = depois.get(escala.pk, ({}, None))
+        mudancas = {}
+        for uid in set(equipe_antes) | set(equipe_depois):
+            de, para = equipe_antes.get(uid), equipe_depois.get(uid)
+            if de is None:
+                mudancas.setdefault(uid, []).append(f'foi escalado em {nomes.get(para, "?")}')
+            elif para is None:
+                mudancas.setdefault(uid, []).append('saiu da escala')
+            elif de != para:
+                mudancas.setdefault(uid, []).append(f'mudou para {nomes.get(para, "?")} (antes {nomes.get(de, "?")})')
+        if ministrante_depois != ministrante_antes:
+            if ministrante_depois:
+                mudancas.setdefault(ministrante_depois, []).append('vai ministrar')
+            if ministrante_antes and ministrante_antes in equipe_depois:
+                mudancas.setdefault(ministrante_antes, []).append('não vai mais ministrar')
+        for uid, partes in mudancas.items():
+            frases.setdefault(uid, []).append(f'Culto de {escala.data:%d/%m}: você ' + ' e '.join(partes))
+
+    autor_id = getattr(autor, 'pk', autor)
+    avisar = (get_user_model().objects.filter(pk__in=frases, is_active=True, inscricoes_push__isnull=False)
+              .exclude(pk=autor_id).distinct())
+    mensagens = {u.pk: ('Sua escala mudou', '. '.join(frases[u.pk]) + '.') for u in avisar}
+    return servico.enviar_personalizado(mensagens, url='/escalas/')

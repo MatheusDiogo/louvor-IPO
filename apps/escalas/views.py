@@ -41,7 +41,8 @@ def escala_list(request):
         escala.eu_ministro = escala.ministrante_id == request.user.id
 
     return render(request, 'escalas/escala_list.html', {
-        'escalas': escalas, 'hoje': hoje, 'urls_offline': ['/escalas/', '/musicas/'] + urls_proximos_cultos(),
+        'escalas': escalas, 'hoje': hoje,
+        'total_meus': sum(1 for e in escalas if e.minhas_funcoes or e.eu_ministro), 'urls_offline': ['/escalas/', '/musicas/'] + urls_proximos_cultos(),
     })
 
 

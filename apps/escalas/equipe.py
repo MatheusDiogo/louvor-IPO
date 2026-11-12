@@ -282,6 +282,8 @@ def escala_equipe_salvar(request):
     except ErroEscala as erro:
         return JsonResponse({'ok': False, 'erro': str(erro)}, status=400)
 
+    ids = [escala.pk for escala, _, _ in planos]
+    retrato_antes = avisos.retrato_escalas(ids)
     with transaction.atomic():
         for escala, celulas, ministrante in planos:
             for inst_id, usuarios in celulas.items():
@@ -295,8 +297,15 @@ def escala_equipe_salvar(request):
                 escala.ministrante_id = ministrante
                 escala.save(update_fields=['ministrante'])
 
+    # Mês já publicado: quem teve a escala mudada recebe uma notificação
+    avisados = avisos.escala_alterada([e for e, _, _ in planos], retrato_antes, avisos.retrato_escalas(ids),
+                                      autor=request.user)
+
     total = len(planos)
-    messages.success(request, f'Escala salva ({total} culto{"s" if total != 1 else ""} alterado{"s" if total != 1 else ""}).')
+    texto = f'Escala salva ({total} culto{"s" if total != 1 else ""} alterado{"s" if total != 1 else ""}).'
+    if avisados:
+        texto += f' {avisados} integrante{"s" if avisados != 1 else ""} avisado{"s" if avisados != 1 else ""} da mudança por notificação.'
+    messages.success(request, texto)
     return JsonResponse({'ok': True})
 
 
