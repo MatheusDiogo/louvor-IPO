@@ -3,7 +3,7 @@ import re
 
 import fitz  # PyMuPDF
 
-from .cifra import ler_chordpro, semitons_entre, tom_base, transpor_texto, usa_bemol
+from .cifra import Anotacao, ler_chordpro, semitons_entre, tom_base, transpor_texto, usa_bemol
 
 LARGURA, ALTURA = fitz.paper_size('a4')
 MARGEM = 42
@@ -77,22 +77,25 @@ def _escrever_linha(esc, partes, transpor, recuo, italico):
         if not linha:
             return
         esc.garantir(altura_acorde + altura_letra + 2)
-        for px, acorde, letra in linha:
+        for px, acorde, letra, fonte_topo in linha:
             if acorde:
-                esc.texto(px, esc.y + TAM_ACORDE, acorde, 'hebo', TAM_ACORDE, VERDE)
+                cor = CINZA if fonte_topo == 'heit' else VERDE
+                esc.texto(px, esc.y + TAM_ACORDE, acorde, fonte_topo, TAM_ACORDE, cor)
             if letra.strip():
                 esc.texto(px, esc.y + altura_acorde + TAM_LETRA, letra, fonte_letra, TAM_LETRA)
         esc.y += altura_acorde + altura_letra + 2
         linha, x = [], MARGEM + recuo + 10  # continuação levemente recuada
 
     for acorde, letra in _pedacos(partes):
+        # Anotação em cima da letra ([{comment: ...}]) sai em itálico cinza; acorde em negrito verde
+        fonte_topo = 'heit' if isinstance(acorde, Anotacao) else 'hebo'
         acorde = transpor(acorde) if acorde else ''
-        largura_acorde = _largura(acorde, 'hebo', TAM_ACORDE) + 4 if acorde else 0
+        largura_acorde = _largura(acorde, fonte_topo, TAM_ACORDE) + 4 if acorde else 0
         largura_letra = _largura(letra, fonte_letra, TAM_LETRA)
         largura = max(largura_acorde, largura_letra)
         if x + largura > limite and linha:
             descarregar()
-        linha.append((x, acorde, letra))
+        linha.append((x, acorde, letra, fonte_topo))
         x += largura
     descarregar()
 

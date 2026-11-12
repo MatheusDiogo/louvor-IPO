@@ -5,6 +5,7 @@ Subconjunto suportado do ChordPro:
   {title: ...}  {t:}  título (usado só na importação/edição)
   {key: ...}    {k:}  tom original
   {comment: ...} {c:} {ci:} {cb:}   anotação (ex.: "Intro: E A9 B"); acordes nela também são transpostos
+  [{comment: ...}]  ou  [*...]     anotação em cima da letra, na posição exata (ex.: "2° Repetir E7")
   {start_of_chorus} / {soc} ... {end_of_chorus} / {eoc}   refrão
   {start_of_verse} / {sov} ... {eov},  {start_of_bridge} / {sob} ... {eob}
   {chorus}            repete o refrão (mostra "Refrão")
@@ -140,10 +141,28 @@ ALIASES = {
 NOMES_SECAO = {'chorus': 'Refrão', 'verse': '', 'bridge': 'Ponte'}
 
 
+class Anotacao(str):
+    """Texto em cima da letra que não é acorde: [{comment: 2° Repetir E7}] ou [*2° Repetir E7]."""
+
+
+ANOTACAO_INLINE_RE = re.compile(
+    r'^\s*(?:\{\s*(?:comment|c|ci|cb|comment_italic|comment_box)\s*:\s*(?P<texto>.*?)\s*\}?|\*\s*(?P<asterisco>.*?))\s*$',
+    re.IGNORECASE,
+)
+
+
+def _acorde_ou_anotacao(conteudo):
+    """Conteúdo de um [...] na letra: acorde (str) ou Anotacao."""
+    m = ANOTACAO_INLINE_RE.match(conteudo)
+    if m:
+        return Anotacao(m.group('texto') if m.group('texto') is not None else m.group('asterisco'))
+    return conteudo.strip()
+
+
 @dataclass
 class Linha:
     tipo: str                 # 'letra' | 'comentario' | 'vazia' | 'inicio' | 'fim' | 'refrao'
-    partes: list = field(default_factory=list)   # [(acorde, letra), ...] para 'letra'
+    partes: list = field(default_factory=list)   # [(acorde ou Anotacao, letra), ...] para 'letra'
     texto: str = ''           # comentário / rótulo de seção
     secao: str = ''           # 'chorus' | 'verse' | 'bridge' (para 'inicio'/'fim')
 
@@ -187,7 +206,7 @@ def ler_chordpro(texto):
         if pedacos[0]:
             partes.append(('', pedacos[0]))
         for i in range(1, len(pedacos), 2):
-            partes.append((pedacos[i].strip(), pedacos[i + 1]))
+            partes.append((_acorde_ou_anotacao(pedacos[i]), pedacos[i + 1]))
         cifra.linhas.append(Linha('letra', partes=partes))
     return cifra
 
@@ -264,13 +283,19 @@ def renderizar_html(texto, tom_original='', tom_destino=''):
             classe = 'cp-line cp-chords-only' if so_acordes else 'cp-line'
             html.append(f'<div class="{classe}">')
             for acorde, letra in linha.partes:
-                acorde_t = transpor_texto(acorde, semitons, bemol if transpor else False) if acorde else ''
+                if isinstance(acorde, Anotacao):
+                    # Anotação: acordes dentro dela mudam de tom e ficam destacados
+                    topo = transpor_texto(acorde, semitons, bemol if transpor else False, marcar=_acorde_html)
+                    classe_topo = 'cp-chord cp-annotation'
+                else:
+                    topo = escape(transpor_texto(acorde, semitons, bemol if transpor else False)) if acorde else ''
+                    classe_topo = 'cp-chord'
                 # Cada palavra vira um bloco: no celular a linha quebra entre palavras
                 palavras = re.findall(r'\S+\s*|\s+', letra) or ['']
                 for indice, palavra in enumerate(palavras):
                     html.append(
                         '<span class="cp-chunk">'
-                        f'<span class="cp-chord">{escape(acorde_t) if indice == 0 else ""}</span>'
+                        f'<span class="{classe_topo if indice == 0 else "cp-chord"}">{topo if indice == 0 else ""}</span>'
                         f'<span class="cp-lyric">{escape(palavra)}</span>'
                         '</span>'
                     )

@@ -616,7 +616,14 @@ button, input, select, textarea {
     font-style: normal;
 }
 
-.cifra-leitor.sem-acordes .cp-chord,
+/* Anotação em cima da letra: [{comment: 2° Repetir E7}] */
+.cp-chord.cp-annotation {
+    color: #6c757d;
+    font-weight: 600;
+    font-style: italic;
+}
+
+.cifra-leitor.sem-acordes .cp-chord:not(.cp-annotation),
 .cifra-leitor.sem-acordes .cp-chords-only {
     display: none;
 }

@@ -47,7 +47,8 @@
                 <div class="d-flex flex-wrap gap-1 mb-2">
                     <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="acorde" title="Inserir acorde no cursor">[ ] Acorde</button>
                     <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="refrao" title="Marcar o trecho selecionado como refrão">Refrão</button>
-                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="comentario" title="Anotação (ex.: Intro)">Anotação</button>
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="comentario" title="Anotação numa linha própria (ex.: Intro)">Anotação</button>
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill" data-inserir="anotacao-letra" title="Anotação em cima da letra, no cursor (ex.: 2° Repetir E7)">Anotação na letra</button>
                     <button type="button" class="btn btn-sm btn-outline-success rounded-pill" data-bs-toggle="modal" data-bs-target="#modalColar">
                         <i class="bi bi-clipboard me-1"></i>Colar cifra comum
                     </button>
@@ -69,6 +70,7 @@ E [A]vimos sua [E/G#]glória
                         <ul class="mb-0 ps-3">
                             <li><code>{start_of_chorus}</code> … <code>{end_of_chorus}</code> marcam o refrão.</li>
                             <li><code>{comment: texto}</code> é uma anotação; acordes nela também mudam de tom.</li>
+                            <li><code>[{comment: 2° Repetir E7}]</code> põe a anotação <strong>em cima da letra</strong>, no ponto exato, como um acorde. Ex.: <code>O [{comment: 2° Repetir E7}]Verbo virou gente</code></li>
                             <li>Colou do Cifra Club ou do Word (acordes em cima da letra)? Ele converte sozinho.</li>
                         </ul>
                     </div>
@@ -204,6 +206,8 @@ E [A]vimos sua [E/G#]glória
         let texto, cursor;
         if (botao.dataset.inserir === 'acorde') {
             texto = `[${selecionado}]`; cursor = ini + 1 + selecionado.length;
+        } else if (botao.dataset.inserir === 'anotacao-letra') {
+            texto = `[{comment: ${selecionado}}]`; cursor = ini + 11 + selecionado.length;
         } else if (botao.dataset.inserir === 'refrao') {
             texto = `{start_of_chorus}\n${selecionado || ''}\n{end_of_chorus}`; cursor = ini + 18 + selecionado.length;
         } else {

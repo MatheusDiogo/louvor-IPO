@@ -70,7 +70,7 @@
     {% if itens %}
     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
         <p class="small text-muted mb-0 me-auto"><i class="bi bi-info-circle me-1"></i>Troque o tom pelo seletor: a cifra é transposta automaticamente para todos.</p>
-        {% if itens|length > 1 %}
+        {% if pode_ordenar and itens|length > 1 %}
         <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalOrdem">
             <i class="bi bi-arrow-down-up me-1"></i>Mudar ordem
         </button>
@@ -79,7 +79,7 @@
     {% endif %}
 </div>
 
-{% if itens|length > 1 %}{% include "escalas/_modal_ordem.html" %}{% endif %}
+{% if pode_ordenar and itens|length > 1 %}{% include "escalas/_modal_ordem.html" %}{% endif %}
 
 <!-- Modal: Adicionar música ao culto -->
 <div class="modal fade" id="modalAdicionarMusica" tabindex="-1">

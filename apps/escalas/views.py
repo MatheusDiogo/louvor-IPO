@@ -156,6 +156,7 @@ def escala_detalhe(request, pk):
         'itens': itens,
         'musicas_disponiveis': musicas_disponiveis,
         'meses_historico': MESES_HISTORICO,
+        'pode_ordenar': pode_ordenar(request.user, escala),
         'tons_maiores': TONS_MAIORES,
         'tons_menores': TONS_MENORES,
     })
@@ -212,8 +213,8 @@ def escala_musica_excluir(request, item_pk):
 
 
 def pode_ordenar(usuario, escala):
-    """Quem ministra o culto e os líderes podem mudar a ordem das músicas."""
-    return usuario.is_lider or escala.ministrante_id == usuario.id
+    """Só quem ministra o culto muda a ordem das músicas (se faltar, o líder escolhe outro ministrante)."""
+    return escala.ministrante_id is not None and escala.ministrante_id == usuario.id
 
 
 @login_required
@@ -222,7 +223,7 @@ def escala_musicas_ordem(request, pk):
     """Salva a nova ordem das músicas do culto (lista de ids dos itens, na ordem desejada)."""
     escala = get_object_or_404(Escala, pk=pk)
     if not pode_ordenar(request.user, escala):
-        messages.error(request, 'Só quem ministra o culto (ou um líder) pode mudar a ordem das músicas.')
+        messages.error(request, 'Só o ministrante do culto pode mudar a ordem das músicas.')
         return redirect('escala_visualizar', pk=pk)
 
     itens = {item.pk: item for item in escala.itens.all()}
