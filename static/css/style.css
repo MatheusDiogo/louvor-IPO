@@ -616,15 +616,18 @@ button, input, select, textarea {
     font-style: normal;
 }
 
-/* Anotação em cima da letra: [{comment: 2° Repetir E7}] */
-.cp-chord.cp-annotation {
+/* Comentário no meio da linha: "Santo [A]santo {c: 2x}" */
+.cp-comment-inline {
     color: #6c757d;
-    font-weight: 600;
     font-style: italic;
+    font-size: 0.9em;
+    font-weight: 400;
 }
 
-.cifra-leitor.sem-acordes .cp-chord:not(.cp-annotation),
-.cifra-leitor.sem-acordes .cp-chords-only {
+/* Sem acordes: ficam só a letra, os comentários sem acorde e o refrão */
+.cifra-leitor.sem-acordes .cp-chord,
+.cifra-leitor.sem-acordes .cp-chords-only,
+.cifra-leitor.sem-acordes .cp-com-acorde {
     display: none;
 }
 

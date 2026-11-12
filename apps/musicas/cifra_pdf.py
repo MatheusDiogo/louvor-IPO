@@ -3,7 +3,7 @@ import re
 
 import fitz  # PyMuPDF
 
-from .cifra import Anotacao, ler_chordpro, semitons_entre, tom_base, transpor_texto, usa_bemol
+from .cifra import Comentario, ler_chordpro, semitons_entre, tom_base, transpor_texto, usa_bemol
 
 LARGURA, ALTURA = fitz.paper_size('a4')
 MARGEM = 42
@@ -55,6 +55,9 @@ def _pedacos(partes):
     """Divide cada trecho de letra em palavras para permitir quebra de linha."""
     resultado = []
     for acorde, letra in partes:
+        if isinstance(letra, Comentario):
+            resultado.append((acorde, letra))  # comentário no meio da linha não é dividido
+            continue
         palavras = re.findall(r'\S+\s*|\s+', letra) or ['']
         resultado.append((acorde, palavras[0]))
         resultado.extend(('', p) for p in palavras[1:])
@@ -64,7 +67,7 @@ def _pedacos(partes):
 def _escrever_linha(esc, partes, transpor, recuo, italico):
     fonte_letra = 'heit' if italico else 'helv'
     tem_acorde = any(a for a, _ in partes)
-    so_acordes = not ''.join(l for _, l in partes).strip()
+    so_acordes = tem_acorde and not ''.join(l for _, l in partes if not isinstance(l, Comentario)).strip()
     altura_acorde = TAM_ACORDE + 2 if tem_acorde else 0
     altura_letra = 0 if so_acordes else TAM_LETRA + 3
     limite = LARGURA - MARGEM
@@ -77,25 +80,30 @@ def _escrever_linha(esc, partes, transpor, recuo, italico):
         if not linha:
             return
         esc.garantir(altura_acorde + altura_letra + 2)
-        for px, acorde, letra, fonte_topo in linha:
-            if acorde:
-                cor = CINZA if fonte_topo == 'heit' else VERDE
-                esc.texto(px, esc.y + TAM_ACORDE, acorde, fonte_topo, TAM_ACORDE, cor)
-            if letra.strip():
-                esc.texto(px, esc.y + altura_acorde + TAM_LETRA, letra, fonte_letra, TAM_LETRA)
+        for px, topo, baixo, comentario in linha:
+            if topo:
+                fonte, tamanho, cor = ('heit', TAM_COMENTARIO, CINZA) if comentario else ('hebo', TAM_ACORDE, VERDE)
+                esc.texto(px, esc.y + TAM_ACORDE, topo, fonte, tamanho, cor)
+            if baixo.strip():
+                fonte, tamanho, cor = ('heit', TAM_COMENTARIO, CINZA) if comentario else (fonte_letra, TAM_LETRA, PRETO)
+                esc.texto(px, esc.y + altura_acorde + TAM_LETRA, baixo, fonte, tamanho, cor)
         esc.y += altura_acorde + altura_letra + 2
         linha, x = [], MARGEM + recuo + 10  # continuação levemente recuada
 
     for acorde, letra in _pedacos(partes):
-        # Anotação em cima da letra ([{comment: ...}]) sai em itálico cinza; acorde em negrito verde
-        fonte_topo = 'heit' if isinstance(acorde, Anotacao) else 'hebo'
-        acorde = transpor(acorde) if acorde else ''
-        largura_acorde = _largura(acorde, fonte_topo, TAM_ACORDE) + 4 if acorde else 0
-        largura_letra = _largura(letra, fonte_letra, TAM_LETRA)
-        largura = max(largura_acorde, largura_letra)
+        comentario = isinstance(letra, Comentario)
+        if comentario:
+            # Comentário em itálico cinza: na altura dos acordes numa linha só de acordes, senão na da letra
+            texto = transpor(letra) + ' '
+            topo, baixo = (texto, '') if so_acordes else ('', texto)
+            largura = _largura(texto, 'heit', TAM_COMENTARIO) + 4
+        else:
+            topo, baixo = (transpor(acorde) if acorde else ''), letra
+            largura_acorde = _largura(topo, 'hebo', TAM_ACORDE) + 4 if topo else 0
+            largura = max(largura_acorde, _largura(baixo, fonte_letra, TAM_LETRA))
         if x + largura > limite and linha:
             descarregar()
-        linha.append((x, acorde, letra, fonte_topo))
+        linha.append((x, topo, baixo, comentario))
         x += largura
     descarregar()
 

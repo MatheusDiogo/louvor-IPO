@@ -4,8 +4,8 @@ Subconjunto suportado do ChordPro:
   [G]letra            acorde na posição exata da sílaba
   {title: ...}  {t:}  título (usado só na importação/edição)
   {key: ...}    {k:}  tom original
-  {comment: ...} {c:} {ci:} {cb:}   anotação (ex.: "Intro: E A9 B"); acordes nela também são transpostos
-  [{comment: ...}]  ou  [*...]     anotação em cima da letra, na posição exata (ex.: "2° Repetir E7")
+  {comment: ...} {c:} {ci:} {cb:}   anotação (ex.: "Intro: E A9 B"); acordes nela também são transpostos.
+                      Pode ficar sozinha na linha ou junto com letra/acordes ("Santo [A]santo {c: 2x}").
   {start_of_chorus} / {soc} ... {end_of_chorus} / {eoc}   refrão
   {start_of_verse} / {sov} ... {eov},  {start_of_bridge} / {sob} ... {eob}
   {chorus}            repete o refrão (mostra "Refrão")
@@ -141,28 +141,26 @@ ALIASES = {
 NOMES_SECAO = {'chorus': 'Refrão', 'verse': '', 'bridge': 'Ponte'}
 
 
-class Anotacao(str):
-    """Texto em cima da letra que não é acorde: [{comment: 2° Repetir E7}] ou [*2° Repetir E7]."""
+class Comentario(str):
+    """Comentário no meio de uma linha de letra/acordes: "Santo [A]santo {c: 2x}"."""
 
 
-ANOTACAO_INLINE_RE = re.compile(
-    r'^\s*(?:\{\s*(?:comment|c|ci|cb|comment_italic|comment_box)\s*:\s*(?P<texto>.*?)\s*\}?|\*\s*(?P<asterisco>.*?))\s*$',
+# {comment: ...} em qualquer ponto da linha
+COMENTARIO_INLINE_RE = re.compile(
+    r'\{\s*(?:comment|c|ci|cb|comment_italic|comment_box)\s*:\s*([^}]*?)\s*\}',
     re.IGNORECASE,
 )
 
 
-def _acorde_ou_anotacao(conteudo):
-    """Conteúdo de um [...] na letra: acorde (str) ou Anotacao."""
-    m = ANOTACAO_INLINE_RE.match(conteudo)
-    if m:
-        return Anotacao(m.group('texto') if m.group('texto') is not None else m.group('asterisco'))
-    return conteudo.strip()
+def tem_acorde_no_texto(texto):
+    """Há algum acorde num texto livre (comentário)?"""
+    return any(eh_acorde(t) for t in TOKEN_RE.findall(texto or ''))
 
 
 @dataclass
 class Linha:
     tipo: str                 # 'letra' | 'comentario' | 'vazia' | 'inicio' | 'fim' | 'refrao'
-    partes: list = field(default_factory=list)   # [(acorde ou Anotacao, letra), ...] para 'letra'
+    partes: list = field(default_factory=list)   # [(acorde, letra ou Comentario), ...] para 'letra'
     texto: str = ''           # comentário / rótulo de seção
     secao: str = ''           # 'chorus' | 'verse' | 'bridge' (para 'inicio'/'fim')
 
@@ -201,12 +199,18 @@ def ler_chordpro(texto):
         if not linha.strip():
             cifra.linhas.append(Linha('vazia'))
             continue
-        pedacos = re.split(r'\[([^\]]*)\]', linha)
+        # Comentários no meio da linha continuam sendo comentários; o resto é letra com acordes
         partes = []
-        if pedacos[0]:
-            partes.append(('', pedacos[0]))
-        for i in range(1, len(pedacos), 2):
-            partes.append((_acorde_ou_anotacao(pedacos[i]), pedacos[i + 1]))
+        trechos = COMENTARIO_INLINE_RE.split(linha)
+        for indice, trecho in enumerate(trechos):
+            if indice % 2:
+                partes.append(('', Comentario(trecho)))
+                continue
+            pedacos = re.split(r'\[([^\]]*)\]', trecho)
+            if pedacos[0]:
+                partes.append(('', pedacos[0]))
+            for i in range(1, len(pedacos), 2):
+                partes.append((pedacos[i].strip(), pedacos[i + 1]))
         cifra.linhas.append(Linha('letra', partes=partes))
     return cifra
 
@@ -217,7 +221,7 @@ def letra_para_busca(texto, limite=4000):
     for linha in (texto or '').splitlines():
         if DIRETIVA_RE.match(linha) or linha.lstrip().startswith('#'):
             continue
-        letra = re.sub(r'\[[^\]]*\]', '', linha).strip()
+        letra = re.sub(r'\[[^\]]*\]', '', COMENTARIO_INLINE_RE.sub(' ', linha)).strip()
         if letra:
             partes.append(letra)
     return re.sub(r'\s+', ' ', ' '.join(partes))[:limite]
@@ -253,6 +257,13 @@ def renderizar_html(texto, tom_original='', tom_destino=''):
     bemol = usa_bemol(tom_destino or tom_original)
     transpor = bool(semitons) or (tom_destino and tom_base(tom_destino) != tom_base(tom_original))
 
+    def comentario_html(texto, tag='span', classe='cp-comment-inline'):
+        """Comentário com os acordes transpostos. Se tiver acorde, some no modo "sem acordes"."""
+        conteudo = transpor_texto(texto, semitons, bemol if transpor else False, marcar=_acorde_html)
+        if tem_acorde_no_texto(texto):
+            classe += ' cp-com-acorde'
+        return f'<{tag} class="{classe}">{conteudo}</{tag}>'
+
     html = ['<div class="cp-song">']
     vazias = 0
     for linha in cifra.linhas:
@@ -263,8 +274,7 @@ def renderizar_html(texto, tom_original='', tom_destino=''):
             continue
         vazias = 0
         if linha.tipo == 'comentario':
-            conteudo = transpor_texto(linha.texto, semitons, bemol if transpor else False, marcar=_acorde_html)
-            html.append(f'<div class="cp-comment">{conteudo}</div>')
+            html.append(comentario_html(linha.texto, 'div', 'cp-comment'))
         elif linha.tipo == 'inicio':
             html.append(f'<div class="cp-section cp-{escape(linha.secao)}">')
             if linha.texto:
@@ -276,26 +286,30 @@ def renderizar_html(texto, tom_original='', tom_destino=''):
         else:
             tem_acorde = any(a for a, _ in linha.partes)
             if not tem_acorde:
-                letra = ''.join(l for _, l in linha.partes)
-                html.append(f'<div class="cp-line cp-lyrics-only"><span class="cp-lyric">{escape(letra)}</span></div>')
+                letra = ''.join(
+                    comentario_html(l) if isinstance(l, Comentario) else escape(l) for _, l in linha.partes
+                )
+                html.append(f'<div class="cp-line cp-lyrics-only"><span class="cp-lyric">{letra}</span></div>')
                 continue
-            so_acordes = not ''.join(l for _, l in linha.partes).strip()
+            so_acordes = not ''.join(l for _, l in linha.partes if not isinstance(l, Comentario)).strip()
             classe = 'cp-line cp-chords-only' if so_acordes else 'cp-line'
             html.append(f'<div class="{classe}">')
             for acorde, letra in linha.partes:
-                if isinstance(acorde, Anotacao):
-                    # Anotação: acordes dentro dela mudam de tom e ficam destacados
-                    topo = transpor_texto(acorde, semitons, bemol if transpor else False, marcar=_acorde_html)
-                    classe_topo = 'cp-chord cp-annotation'
-                else:
-                    topo = escape(transpor_texto(acorde, semitons, bemol if transpor else False)) if acorde else ''
-                    classe_topo = 'cp-chord'
+                if isinstance(letra, Comentario):
+                    # Numa linha só de acordes o comentário fica na altura dos acordes; senão, na da letra
+                    comentario = comentario_html(letra)
+                    # (o espaço embaixo deixa o bloco da mesma altura dos acordes, que também têm um espaço)
+                    topo, baixo = (comentario, ' ') if so_acordes else ('', comentario + ' ')
+                    html.append(f'<span class="cp-chunk"><span class="cp-chord">{topo}</span>'
+                                f'<span class="cp-lyric">{baixo}</span></span>')
+                    continue
+                acorde_t = transpor_texto(acorde, semitons, bemol if transpor else False) if acorde else ''
                 # Cada palavra vira um bloco: no celular a linha quebra entre palavras
                 palavras = re.findall(r'\S+\s*|\s+', letra) or ['']
                 for indice, palavra in enumerate(palavras):
                     html.append(
                         '<span class="cp-chunk">'
-                        f'<span class="{classe_topo if indice == 0 else "cp-chord"}">{topo if indice == 0 else ""}</span>'
+                        f'<span class="cp-chord">{escape(acorde_t) if indice == 0 else ""}</span>'
                         f'<span class="cp-lyric">{escape(palavra)}</span>'
                         '</span>'
                     )
