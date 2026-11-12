@@ -96,10 +96,124 @@
         }
     });
 
+    // ---------------------------------------------------------------- Cores da caixa da cifra
+    // Fundo, letra e acordes escolhidos pela pessoa (guardados no aparelho, valem em todas as cifras).
+    const TEMAS = {
+        padrao: { nome: 'Padrão', fundo: '#ffffff', letra: '#212529', acorde: '#166534' },
+        escuro: { nome: 'Escuro', fundo: '#121212', letra: '#f1f3f5', acorde: '#4ade80' },
+        sepia: { nome: 'Sépia', fundo: '#f4ecd8', letra: '#3b2f1e', acorde: '#9a3412' },
+        contraste: { nome: 'Alto contraste', fundo: '#000000', letra: '#ffffff', acorde: '#facc15' },
+        noite: { nome: 'Noite', fundo: '#0f172a', letra: '#e2e8f0', acorde: '#38bdf8' },
+    };
+    const COR_RE = /^#[0-9a-f]{6}$/i;
+    let cores = null;  // null = padrão do site
+    try {
+        const salvas = JSON.parse(ler('cifra-cores', 'null'));
+        if (salvas && ['fundo', 'letra', 'acorde'].every(k => COR_RE.test(salvas[k]))) cores = salvas;
+    } catch (e) { /* valor inválido: usa o padrão */ }
+
+    function aplicarCores() {
+        const raiz = document.documentElement;
+        const iguais = c => c && ['fundo', 'letra', 'acorde'].every(k => c[k].toLowerCase() === TEMAS.padrao[k]);
+        if (!cores || iguais(cores)) {
+            raiz.removeAttribute('data-cifra-cores');
+            ['--cifra-fundo', '--cifra-letra', '--cifra-acorde'].forEach(v => raiz.style.removeProperty(v));
+            return;
+        }
+        raiz.setAttribute('data-cifra-cores', '');
+        raiz.style.setProperty('--cifra-fundo', cores.fundo);
+        raiz.style.setProperty('--cifra-letra', cores.letra);
+        raiz.style.setProperty('--cifra-acorde', cores.acorde);
+    }
+    aplicarCores();
+
+    let modalCores = null;
+    function abrirCores() {
+        if (!modalCores) {
+            const caixa = document.createElement('div');
+            caixa.className = 'modal fade';
+            caixa.id = 'modalCores';
+            caixa.tabIndex = -1;
+            caixa.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header border-0 pt-4 px-4">
+                            <h5 class="fw-bold mb-0" style="color: var(--primary-green);"><i class="bi bi-palette me-2"></i>Cores da cifra</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body px-4">
+                            <div class="small fw-bold text-secondary mb-2">Temas</div>
+                            <div class="d-flex flex-wrap gap-2 mb-3" id="coresTemas"></div>
+                            <div class="small fw-bold text-secondary mb-2">Personalizar</div>
+                            <div class="row g-2 mb-3">
+                                <label class="col-4 cor-campo"><input type="color" data-cor="fundo"><span>Fundo</span></label>
+                                <label class="col-4 cor-campo"><input type="color" data-cor="letra"><span>Letra</span></label>
+                                <label class="col-4 cor-campo"><input type="color" data-cor="acorde"><span>Acordes</span></label>
+                            </div>
+                            <div class="cores-previa" id="coresPrevia">
+                                <div class="cores-previa-acordes">G&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;D/F#&nbsp;&nbsp;&nbsp;&nbsp;Em</div>
+                                <div>Grande é o Senhor e digno de louvor</div>
+                            </div>
+                            <p class="small text-muted mt-2 mb-0">Fica guardado neste aparelho e vale para todas as cifras.</p>
+                        </div>
+                        <div class="modal-footer border-0 pb-4 px-4">
+                            <button type="button" class="btn btn-light px-3 rounded-pill" id="coresPadrao">Restaurar padrão</button>
+                            <button type="button" class="btn-login btn-acao" data-bs-dismiss="modal">Pronto</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(caixa);
+            const temas = caixa.querySelector('#coresTemas');
+            Object.entries(TEMAS).forEach(([chave, t]) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'tema-cor';
+                b.dataset.tema = chave;
+                b.innerHTML = `<span class="tema-amostra" style="background:${t.fundo};color:${t.letra};"><b style="color:${t.acorde};">G</b> Aa</span><span class="tema-nome">${t.nome}</span>`;
+                b.addEventListener('click', () => escolherCores(chave === 'padrao' ? null : { fundo: t.fundo, letra: t.letra, acorde: t.acorde }));
+                temas.appendChild(b);
+            });
+            caixa.querySelectorAll('[data-cor]').forEach(campo => campo.addEventListener('input', () => {
+                const atual = { ...(cores || TEMAS.padrao) };
+                atual[campo.dataset.cor] = campo.value;
+                escolherCores({ fundo: atual.fundo, letra: atual.letra, acorde: atual.acorde });
+            }));
+            caixa.querySelector('#coresPadrao').addEventListener('click', () => escolherCores(null));
+            modalCores = { caixa, modal: new bootstrap.Modal(caixa) };
+        }
+        atualizarModalCores();
+        modalCores.modal.show();
+    }
+
+    function escolherCores(novas) {
+        cores = novas;
+        gravar('cifra-cores', cores ? JSON.stringify(cores) : 'null');
+        aplicarCores();
+        atualizarModalCores();
+    }
+
+    function atualizarModalCores() {
+        if (!modalCores) return;
+        const atual = cores || TEMAS.padrao;
+        modalCores.caixa.querySelectorAll('[data-cor]').forEach(campo => { campo.value = atual[campo.dataset.cor]; });
+        const previa = modalCores.caixa.querySelector('#coresPrevia');
+        previa.style.background = atual.fundo;
+        previa.style.color = atual.letra;
+        previa.querySelector('.cores-previa-acordes').style.color = atual.acorde;
+        modalCores.caixa.querySelectorAll('.tema-cor').forEach(b => {
+            const t = TEMAS[b.dataset.tema];
+            b.classList.toggle('ativo', ['fundo', 'letra', 'acorde'].every(k => t[k].toLowerCase() === atual[k].toLowerCase()));
+        });
+    }
+
     document.addEventListener('click', e => {
         const botao = e.target.closest('[data-cifra]');
         if (!botao) return;
         const acao = botao.dataset.cifra;
+        if (acao === 'cores') {
+            abrirCores();
+            return;
+        }
         if (acao === 'foco') {
             const alvo = botao.dataset.focoAlvo ? document.querySelector(botao.dataset.focoAlvo) : botao.closest('[data-foco]');
             if (alvo) abrirFoco(alvo, true);
