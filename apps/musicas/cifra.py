@@ -36,7 +36,7 @@ ACORDE_RE = re.compile(
     r'(?P<sufixo>(?:[^/\s]|/(?=[0-9(]))*)'
     r'(?:/(?P<baixo>[A-G][#b]?))?$'
 )
-SUFIXO_VALIDO_RE = re.compile(r'^(?:maj|min|dim|aug|sus|add|m|M|[0-9]|[°º+\-#b()/x]|ø)*$')
+SUFIXO_VALIDO_RE = re.compile(r'^(?:maj|min|dim|aug|sus|add|m|M|[0-9]|[°º+\-#b()/x]|ø|Δ)*$')
 # Pedaços de texto que podem ser acordes dentro de anotações: "(A/B – início)", "D—C—G/B"
 TOKEN_RE = re.compile(r"[^\s()\[\]{},;:—–|]+")
 

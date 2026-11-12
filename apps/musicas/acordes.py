@@ -9,6 +9,7 @@ De onde vem cada desenho, nesta ordem de preferência:
 O nome escrito na cifra ("A4", "C7M", "Bm7(b5)") é traduzido pela tabela NomeAcorde.
 """
 import json
+import re
 from pathlib import Path
 
 from .cifra import ACORDE_RE, INDICE_NOTA, SUFIXO_VALIDO_RE
@@ -19,38 +20,74 @@ ARQUIVO_BASE = Path(__file__).resolve().parent / 'dados' / 'violao_chords_db.jso
 AFINACAO_VIOLAO = [40, 45, 50, 55, 59, 64]
 ABERTURA_MAXIMA = 3  # distância máxima entre a casa mais baixa e a mais alta apertadas (acorde gerado)
 
-# Escrita da equipe (o que vem depois da nota) -> tipo na tabela de desenhos
+# ---------------------------------------------------------------- grafias (o que vem depois da nota)
+
+def normalizar_grafia(escrita):
+    """Forma única de escrever o tipo do acorde, para que variações contem como uma só:
+
+      7(9) = 7/9 = 7(add9) = 79      m7(b5) = m7(5-) = m7/5- = m7-5 = ø = m7b5
+      maj7 = M7 = (7M) = 7M          sus4 = sus = (4) = 4        dim = o = º = °
+      5+ = 5# = (#5) = #5            7(5+) = 7+5 = 7#5           9- = b9, 9+ = #9
+    """
+    s = (escrita or '').strip().replace('º', '°').replace('ø', 'm7b5')
+    if s == 'M':
+        return ''
+    s = s.replace('maj7', '7M').replace('M7', '7M').replace('Δ7', '7M').replace('Δ', '7M')
+    s = re.sub(r'maj(?=\d)', '7M', s).replace('maj', '')   # maj9 = 7M9; "Cmaj" sozinho = C maior
+    s = re.sub(r'^min', 'm', s)
+    s = re.sub(r'^-', 'm', s)                       # -7 = m7
+    # Diminuto no padrão Cifra Club: Cm5- = tríade; C° = com sétima (o "dim" americano é a tríade)
+    s = s.replace('dim7', '°').replace('dim', 'm5-').replace('aug', '+')
+    s = re.sub(r'^o', '°', s)
+    s = s.replace('sus4', '4').replace('sus2', '2').replace('sus', '4').replace('add', '')
+    # Alterações, pedaço por pedaço (parênteses e barras separam os pedaços: "m7(5-)" -> "m7", "5-")
+    pedacos = []
+    for p in re.split(r'[()/\s]+', s):
+        p = re.sub(r'(\d)-(\d+)', r'\1b\2', p)       # 7-5  -> 7b5
+        p = re.sub(r'(\d+)-$', r'b\1', p)            # 5-   -> b5
+        p = re.sub(r'(5|9|11|13)[+#]$', r'#\1', p)   # 5+ / 5# -> #5
+        p = re.sub(r'\+(5|9|11|13)', r'#\1', p)      # 7+5  -> 7#5
+        pedacos.append(p)
+    s = ''.join(pedacos)
+    return '°' if s == '°7' else s   # C°7 = C° (diminuto com sétima)
+
+
+# Grafia (já normalizada) -> tipo na tabela de desenhos. Segue o padrão de cifragem do Cifra Club
+# (https://suporte.cifraclub.com.br/, "padrão de cifragem de acordes"): C9 = add9, C11 = tríade + 11ª,
+# Cm5- = diminuto, C° = diminuto com sétima, C5 = power chord, extensões entre parênteses: C7(9), C7M(9)...
 NOMES_PADRAO = {
-    '': 'major', 'M': 'major', 'maj': 'major',
-    'm': 'minor', 'min': 'minor', '-': 'minor',
-    '4': 'sus4', 'sus4': 'sus4', 'sus': 'sus4', '(4)': 'sus4',
-    '2': 'sus2', 'sus2': 'sus2',
-    '9': 'add9', 'add9': 'add9', '(9)': 'add9', 'add2': 'add9', '(add9)': 'add9',
-    'm9': 'madd9', 'm(9)': 'madd9', 'madd9': 'madd9', 'm(add9)': 'madd9', 'm2': 'madd9',
-    '7': '7', 'm7': 'm7',
-    '7M': 'maj7', 'maj7': 'maj7', 'M7': 'maj7', '(7M)': 'maj7',
-    '6': '6', 'm6': 'm6', '6(9)': '69', '69': '69', '6/9': '69', 'm6(9)': 'm69', 'm69': 'm69', 'm6/9': 'm69',
-    '7(9)': '9', '7/9': '9', '79': '9', '7(add9)': '9',
-    '7(4)': '7sus4', '7sus4': '7sus4', '4/7': '7sus4', '7/4': '7sus4', '74': '7sus4', '47': '7sus4',
-    '4(7)': '7sus4', '7(sus4)': '7sus4',
-    'm7(9)': 'm9', 'm7/9': 'm9', 'm79': 'm9', 'm7(11)': 'm11', 'm7/11': 'm11', 'm11': 'm11',
-    '7M(9)': 'maj9', '7M/9': 'maj9', 'maj9': 'maj9', '7M(13)': 'maj13', 'maj13': 'maj13',
-    'm7(b5)': 'm7b5', 'm7b5': 'm7b5', 'm7(5-)': 'm7b5', 'm7/5-': 'm7b5', 'm7-5': 'm7b5', 'ø': 'm7b5',
-    '°': 'dim', 'º': 'dim', 'dim': 'dim', 'o': 'dim',
-    '°7': 'dim7', 'º7': 'dim7', 'dim7': 'dim7', 'o7': 'dim7',
-    '+': 'aug', 'aug': 'aug', '5+': 'aug', '5#': 'aug', '(#5)': 'aug', '#5': 'aug',
-    '7(b9)': '7b9', '7b9': '7b9', '7(9-)': '7b9', '7(#9)': '7#9', '7#9': '7#9', '7(9+)': '7#9',
-    '7(13)': '13', '13': '13', '7(11)': '11', '11': '11', '9(#11)': '9#11', '7(#11)': '9#11',
-    '7(b5)': '7b5', '7b5': '7b5', '7(5-)': '7b5', '7/5-': '7b5',
-    '7(#5)': 'aug7', '7#5': 'aug7', '7(5+)': 'aug7', '7+5': 'aug7', '7+': 'aug7',
-    'm7M': 'mmaj7', 'm(7M)': 'mmaj7', 'mmaj7': 'mmaj7', 'm7M(9)': 'mmaj9', 'mmaj9': 'mmaj9',
-    '7M(#5)': 'maj7#5', '7M(5+)': 'maj7#5', '7M(b5)': 'maj7b5', '7M(5-)': 'maj7b5',
+    '': 'major', 'm': 'minor', '5': '5', '59': 'sus2',
+    '4': 'sus4', '2': 'sus2', '9': 'add9', 'm9': 'madd9', 'm2': 'madd9', '49': 'sus4add9',
+    '11': 'add11', 'm11': 'madd11',
+    '7': '7', 'm7': 'm7', '7M': 'maj7',
+    '6': '6', 'm6': 'm6', '69': '69', 'm69': 'm69',
+    '79': '9', '74': '7sus4', '47': '7sus4', '749': '7sus4add9', 'm79': 'm9', 'm711': 'm11',
+    '7M9': 'maj9', '7M13': 'maj13', 'm7b5': 'm7b5',
+    'mb5': 'dim', '°': 'dim7', '+': 'aug', '#5': 'aug',
+    '7b9': '7b9', '7#9': '7#9', '713': '13', '13': '13', '7913': '13', '711': '11', '9#11': '9#11', '7#11': '9#11',
+    '7b5': '7b5', '7#5': 'aug7', '7+': 'aug7',
+    'm7M': 'mmaj7', 'm7M9': 'mmaj9', '7M#5': 'maj7#5', '7Mb5': 'maj7b5',
 }
 
+
+# Nome de cada tipo para mostrar na tela (como costuma ser escrito na cifra)
+ROTULOS_TIPOS = {
+    'major': 'maior', 'minor': 'menor (m)', 'dim': 'diminuto (m5-)', 'dim7': 'diminuto com sétima (°)',
+    '5': 'power chord (5)', 'add11': 'com 11ª (11)', 'madd11': 'menor com 11ª (m11)', 'sus4add9': '4(9)',
+    '7sus4add9': '7(4/9)',
+    'aug': 'aumentado (+)', 'sus2': 'sus2 (2)', 'sus4': 'sus4 (4)', '7sus4': '7sus4 (4/7)', 'add9': 'add9 (9)',
+    'madd9': 'menor com nona (m9)', '6': '6', '69': '6/9', 'm6': 'm6', 'm69': 'm6/9', '7': '7', '7b5': '7(b5)',
+    'aug7': '7(#5)', '9': '7(9)', '9b5': '7(9 b5)', 'aug9': '7(9 #5)', '7b9': '7(b9)', '7#9': '7(#9)', '11': '7(11)',
+    '9#11': '7(9 #11)', '13': '7(13)', 'alt': '7 alterado', '7sg': '7sg', 'maj7': '7M', 'maj7b5': '7M(b5)',
+    'maj7#5': '7M(#5)', 'maj9': '7M(9)', 'maj11': '7M(11)', 'maj13': '7M(13)', 'm7': 'm7', 'm7b5': 'm7(b5)',
+    'm9': 'm7(9)', 'm11': 'm7(11)', 'mmaj7': 'm(7M)', 'mmaj7b5': 'm(7M b5)', 'mmaj9': 'm(7M 9)', 'mmaj11': 'm(7M 11)',
+}
 
 # Notas de cada tipo de acorde, em semitons a partir da fundamental (usado no baixo e no teclado)
 FORMULAS = {
     'major': [0, 4, 7], 'minor': [0, 3, 7], 'dim': [0, 3, 6], 'dim7': [0, 3, 6, 9], 'aug': [0, 4, 8],
+    '5': [0, 7], 'add11': [0, 4, 7, 17], 'madd11': [0, 3, 7, 17], 'sus4add9': [0, 5, 7, 14],
+    '7sus4add9': [0, 5, 7, 10, 14],
     'sus2': [0, 2, 7], 'sus4': [0, 5, 7], '7sus4': [0, 5, 7, 10], 'add9': [0, 4, 7, 14], 'madd9': [0, 3, 7, 14],
     '6': [0, 4, 7, 9], '69': [0, 4, 7, 9, 14], 'm6': [0, 3, 7, 9], 'm69': [0, 3, 7, 9, 14],
     '7': [0, 4, 7, 10], '7b5': [0, 4, 6, 10], 'aug7': [0, 4, 8, 10], '9': [0, 4, 7, 10, 14],
@@ -87,7 +124,7 @@ def importar_base(DesenhoAcorde, NomeAcorde=None, arquivo=ARQUIVO_BASE):
         for d in dados['desenhos']
     ], batch_size=500)
     if NomeAcorde is not None:
-        existentes = set(NomeAcorde.objects.values_list('escrita', flat=True))
+        existentes = {normalizar_grafia(e) for e in NomeAcorde.objects.values_list('escrita', flat=True)}
         NomeAcorde.objects.bulk_create([
             NomeAcorde(escrita=escrita, tipo=tipo, origem='padrao')
             for escrita, tipo in NOMES_PADRAO.items() if escrita not in existentes
@@ -98,8 +135,9 @@ def importar_base(DesenhoAcorde, NomeAcorde=None, arquivo=ARQUIVO_BASE):
 # ---------------------------------------------------------------- nome do acorde -> (raiz, tipo, baixo)
 
 def mapa_de_nomes():
+    """{grafia normalizada: tipo}. As grafias da tabela já são guardadas normalizadas."""
     from .models import NomeAcorde
-    return dict(NomeAcorde.objects.values_list('escrita', 'tipo'))
+    return {normalizar_grafia(e): t for e, t in NomeAcorde.objects.values_list('escrita', 'tipo')}
 
 
 def analisar(acorde, nomes):
@@ -111,7 +149,7 @@ def analisar(acorde, nomes):
     baixo = INDICE_NOTA.get(m.group('baixo')) if m.group('baixo') else None
     if baixo == raiz:
         baixo = None  # "A/A" é só A
-    return raiz, nomes.get(m.group('sufixo')), baixo
+    return raiz, nomes.get(normalizar_grafia(m.group('sufixo'))), baixo
 
 
 # ---------------------------------------------------------------- acorde com baixo gerado
@@ -192,6 +230,27 @@ def dedos_simples(casas):
 
 # ---------------------------------------------------------------- busca dos desenhos
 
+def power_chords(raiz):
+    """C5: fundamental, quinta e oitava. Uma posição com a fundamental na 6ª corda e outra na 5ª."""
+    desenhos = []
+    for corda in (0, 1):
+        casa = (raiz - AFINACAO_VIOLAO[corda]) % 12
+        casas = [-1] * 6
+        casas[corda], casas[corda + 1], casas[corda + 2] = casa, casa + 2, casa + 2
+        dedos = [0] * 6
+        if casa > 0:
+            dedos[corda], dedos[corda + 1], dedos[corda + 2] = 1, 3, 4
+        else:
+            dedos[corda + 1], dedos[corda + 2] = 2, 3
+        desenhos.append({'casas': casas, 'dedos': dedos, 'pestanas': [], 'gerado': False})
+    return sorted(desenhos, key=lambda d: max(d['casas']))
+
+
+def ordem_de_exibicao(desenho):
+    """Ordem do "Variar": campo ordem; no empate, equipe antes da base e o mais recente antes."""
+    return (desenho['ordem'], desenho['origem'] != 'equipe', -desenho['id'])
+
+
 def _como_dict(desenho, gerado=False):
     return {'casas': desenho['casas'], 'dedos': desenho['dedos'], 'pestanas': desenho['pestanas'],
             'gerado': gerado}
@@ -211,9 +270,9 @@ def desenhos_violao(nomes_acordes, nomes=None):
     if pares:
         consulta = DesenhoAcorde.objects.filter(instrumento='violao', ativo=True,
                                                 raiz__in={r for r, _ in pares}, tipo__in={t for _, t in pares})
-        # equipe antes da base; depois pela ordem
-        for d in sorted(consulta.values('raiz', 'tipo', 'baixo', 'casas', 'dedos', 'pestanas', 'ordem', 'origem'),
-                        key=lambda d: (d['origem'] != 'equipe', d['ordem'])):
+        # pela ordem (definida na tela de Acordes); no empate, os da equipe antes dos da base
+        for d in sorted(consulta.values('raiz', 'tipo', 'baixo', 'casas', 'dedos', 'pestanas', 'ordem', 'origem', 'id'),
+                        key=ordem_de_exibicao):
             linhas.setdefault((d['raiz'], d['tipo'], d['baixo']), []).append(d)
 
     resultado = {}
@@ -230,6 +289,8 @@ def desenhos_violao(nomes_acordes, nomes=None):
             continue
         exatos = linhas.get((raiz, tipo, baixo), [])
         desenhos = [_como_dict(d) for d in exatos]
+        if tipo == '5' and baixo is None and not desenhos:
+            desenhos = power_chords(raiz)
         aviso = ''
         if baixo is not None and not desenhos:
             for d in linhas.get((raiz, tipo, None), []):

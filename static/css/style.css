@@ -1068,3 +1068,78 @@ main.container {
 }
 
 .cifra-leitor.sem-diagramas .acordes-bloco { border-bottom: 0; margin-bottom: 4px; }
+
+/* ---------------------------------------------------------------- Tela de Acordes (líderes) */
+.acorde-admin-titulo { color: var(--primary-green); }
+
+.acorde-admin-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 10px;
+}
+
+.acorde-admin-cartao {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px 6px;
+    text-align: center;
+    background: #fff;
+}
+
+.acorde-admin-cartao.inativo { opacity: 0.55; background: #f8faf9; }
+
+.lista-grafias {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+/* Editor: braço clicável (6 cordas x 5 casas + linha dos dedos) */
+.editor-braco {
+    display: grid;
+    grid-template-columns: repeat(6, 38px);
+    gap: 0;
+}
+
+.editor-corda {
+    height: 30px;
+    border: 0;
+    background: none;
+    font-weight: 700;
+    color: #6c757d;
+}
+
+.editor-casa {
+    height: 38px;
+    border: 0;
+    border-bottom: 1px solid #9aa5a0;
+    background: linear-gradient(to right, transparent 18px, #9aa5a0 18px, #9aa5a0 19px, transparent 19px);
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    padding: 0;
+}
+
+.editor-casa.primeira { border-top: 4px solid #1a2e1a; }
+
+.editor-casa.marcada {
+    background:
+        radial-gradient(circle at 50% 50%, #1a2e1a 0 12px, transparent 12.5px),
+        linear-gradient(to right, transparent 18px, #9aa5a0 18px, #9aa5a0 19px, transparent 19px);
+}
+
+.editor-casa:hover:not(.marcada) {
+    background:
+        radial-gradient(circle at 50% 50%, #bbf7d0 0 11px, transparent 11.5px),
+        linear-gradient(to right, transparent 18px, #9aa5a0 18px, #9aa5a0 19px, transparent 19px);
+}
+
+.editor-dedo {
+    margin-top: 6px;
+    padding: 2px 4px;
+    font-size: 12px;
+    background-image: none;
+    text-align: center;
+    width: 36px;
+}
+
+.editor-previa .acorde-svg { width: 120px; height: auto; }

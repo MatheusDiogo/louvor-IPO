@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Acordes | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'musicas' %}" class="text-success text-decoration-none">Músicas</a></li>
+            <li class="breadcrumb-item active">Acordes</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Acordes</h2>
+            <p class="page-subtitle">Desenhos de violão mostrados nas cifras e as grafias que o site entende.</p>
+        </div>
+    </div>
+
+    <!-- Busca -->
+    <div class="table-card p-3 p-md-4 mb-3">
+        <form id="formBusca" class="d-flex gap-2" autocomplete="off">
+            <div class="input-group-modern flex-grow-1">
+                <i class="bi bi-search text-muted"></i>
+                <input type="search" id="campoAcorde" value="{{ busca }}" placeholder="Acorde como na cifra: B/D#, A4, C7M..."
+                       autocapitalize="none" spellcheck="false" aria-label="Acorde">
+            </div>
+            <button type="submit" class="btn-login btn-acao px-4">Buscar</button>
+        </form>
+        <div class="small text-muted mt-2">
+            Ex.:
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline exemplo-acorde">B/D#</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline exemplo-acorde">E/G#</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline exemplo-acorde">A4</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline exemplo-acorde">C7M</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline exemplo-acorde">Bm7(b5)</button>
+        </div>
+    </div>
+
+    <div id="resultado" class="mb-4" aria-live="polite"></div>
+
+    <!-- Grafias -->
+    <div class="table-card p-3 p-md-4" id="grafias">
+        <h5 class="fw-bold mb-1" style="color: var(--primary-green);"><i class="bi bi-type me-2"></i>Grafias</h5>
+        <p class="small text-muted mb-1">Como a equipe escreve o tipo do acorde <strong>depois da nota</strong>. Ex.: <code>4/7</code> = 7sus4 faz <code>A4/7</code>, <code>B4/7</code>... funcionarem em todas as músicas.</p>
+        <p class="small text-muted mb-1">Variações de escrita já são reconhecidas sozinhas, então cada grafia aparece uma vez só: <code>7(9)</code> = <code>7/9</code> = <code>79</code>; <code>m7(5-)</code> = <code>m7(b5)</code> = <code>m7b5</code>; <code>maj7</code> = <code>Δ</code> = <code>7M</code>; <code>sus4</code> = <code>4</code>; <code>5+</code> = <code>#5</code>; <code>dim</code> = <code>m5-</code>; <code>°7</code> = <code>°</code>.</p>
+        <p class="small text-muted">O significado segue o <a href="https://suporte.cifraclub.com.br/pt-BR/support/solutions/articles/64000308284" target="_blank" rel="noopener" class="text-success">padrão de cifragem do Cifra Club</a>: <code>C9</code> = add9, <code>C11</code> = tríade + 11ª, <code>Cm5-</code> = diminuto, <code>C°</code> = diminuto com sétima, <code>C5</code> = power chord. Para a equipe usar outro significado, cadastre a grafia de novo com o tipo desejado.</p>
+
+        <form method="post" action="{% url 'grafia_salvar' %}" class="row g-2 align-items-end mb-3">
+            {% csrf_token %}
+            <div class="col-5 col-md-3">
+                <label class="form-label small fw-bold text-secondary" for="campoEscrita">Escrita</label>
+                <input type="text" name="escrita" id="campoEscrita" class="form-control" maxlength="20" placeholder="ex.: 4/7"
+                       autocapitalize="none" spellcheck="false" style="border-radius: 12px;">
+            </div>
+            <div class="col-7 col-md-5">
+                <label class="form-label small fw-bold text-secondary" for="campoTipo">Significa</label>
+                <select name="tipo" id="campoTipo" class="form-select" required style="border-radius: 12px;">
+                    <option value="">Escolha...</option>
+                    {% for valor, rotulo in tipos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-success rounded-pill w-100"><i class="bi bi-plus-lg me-1"></i>Salvar grafia</button>
+            </div>
+        </form>
+
+        <div class="input-group-modern mb-2">
+            <i class="bi bi-funnel text-muted"></i>
+            <input type="search" id="filtroGrafias" placeholder="Filtrar grafias..." aria-label="Filtrar grafias">
+        </div>
+        <div class="lista-grafias">
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th class="small text-secondary">Escrita</th><th class="small text-secondary">Significa</th><th></th></tr></thead>
+                <tbody>
+                    {% for grafia in grafias %}
+                    <tr class="linha-grafia" data-busca="{{ grafia.escrita|lower }} {{ grafia.tipo|lower }}">
+                        <td><code>{{ grafia.escrita|default:"(vazio)" }}</code></td>
+                        <td class="small">{{ grafia.rotulo }}{% if grafia.origem == 'equipe' %} <span class="badge bg-success-subtle text-success-emphasis">equipe</span>{% endif %}</td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'grafia_excluir' grafia.pk %}" class="m-0"
+                                  onsubmit="return confirm('Remover a grafia &quot;{{ grafia.escrita|escapejs }}&quot;? Acordes escritos assim ficam sem desenho.')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" aria-label="Remover {{ grafia.escrita }}"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Editor de desenho -->
+<div class="modal fade" id="modalEditor" tabindex="-1" aria-labelledby="tituloEditor">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0" id="tituloEditor" style="color: var(--primary-green);"><i class="bi bi-pencil me-2"></i>Desenho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4">
+                <p class="small text-muted mb-2">Toque na casa de cada corda. Tocar de novo deixa a corda solta. Em cima: <strong>×</strong> não toca / <strong>○</strong> solta.</p>
+                <div class="d-flex flex-wrap gap-4 align-items-start">
+                    <div>
+                        <div id="editorBraco" class="editor-braco"></div>
+                        <div class="d-flex align-items-center gap-2 mt-2 small">
+                            <span class="text-secondary fw-semibold">Casa inicial</span>
+                            <button type="button" class="btn btn-sm btn-light border" id="inicioMenos" aria-label="Casa anterior">−</button>
+                            <span id="inicioValor" class="fw-bold">1</span>
+                            <button type="button" class="btn btn-sm btn-light border" id="inicioMais" aria-label="Próxima casa">+</button>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="small text-secondary fw-semibold mb-1">Como vai ficar</div>
+                        <div class="acorde-nome" id="editorNome"></div>
+                        <div id="editorPrevia" class="editor-previa"></div>
+                        <label class="form-label small fw-bold text-secondary mt-2" for="editorPestana">Pestana</label>
+                        <select id="editorPestana" class="form-select form-select-sm"></select>
+                    </div>
+                </div>
+                <div class="small text-danger mt-2" id="editorErro" hidden></div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-login btn-acao" id="editorSalvar">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/acordes.js' %}"></script>
+<script>
+(function () {
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const URLS = {
+        buscar: "{% url 'acordes_buscar' %}",
+        salvar: "{% url 'acordes_salvar' %}",
+        ativo: id => `/musicas/acordes/${id}/ativo/`,
+        mover: id => `/musicas/acordes/${id}/mover/`,
+        excluir: id => `/musicas/acordes/${id}/excluir/`,
+    };
+    const campo = document.getElementById('campoAcorde');
+    const resultado = document.getElementById('resultado');
+    let atual = null;  // último resultado da busca
+
+    const post = (url, corpo, json) => fetch(url, {
+        method: 'POST',
+        headers: json ? { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' } : { 'X-CSRFToken': csrf },
+        body: json ? JSON.stringify(corpo) : new URLSearchParams(corpo || {}),
+    }).then(r => r.json());
+
+    const criar = (tag, classe, texto) => {
+        const e = document.createElement(tag);
+        if (classe) e.className = classe;
+        if (texto !== undefined) e.textContent = texto;
+        return e;
+    };
+    const botao = (rotulo, classe, acao, titulo) => {
+        const b = criar('button', 'btn btn-sm ' + classe);
+        b.type = 'button';
+        b.innerHTML = rotulo;
+        if (titulo) { b.title = titulo; b.setAttribute('aria-label', titulo); }
+        b.addEventListener('click', acao);
+        return b;
+    };
+
+    // ------------------------------------------------------------ busca
+    function buscar(nome) {
+        nome = (nome || '').trim();
+        if (!nome) return;
+        campo.value = nome;
+        history.replaceState(null, '', '?acorde=' + encodeURIComponent(nome));
+        fetch(URLS.buscar + '?nome=' + encodeURIComponent(nome)).then(r => r.json()).then(mostrar);
+    }
+
+    function cartao(desenho, indice, total) {
+        const c = criar('div', 'acorde-admin-cartao' + (desenho.ativo === false ? ' inativo' : ''));
+        const etiquetas = criar('div', 'd-flex gap-1 flex-wrap justify-content-center mb-1');
+        if (desenho.gerado) etiquetas.appendChild(criar('span', 'badge bg-warning-subtle text-warning-emphasis', 'automático'));
+        else etiquetas.appendChild(criar('span', 'badge ' + (desenho.origem === 'equipe' ? 'bg-success' : 'bg-secondary-subtle text-secondary-emphasis'),
+                                         desenho.origem === 'equipe' ? 'equipe' : 'base'));
+        if (desenho.ativo === false) etiquetas.appendChild(criar('span', 'badge bg-dark-subtle text-dark-emphasis', 'escondido'));
+        c.appendChild(etiquetas);
+        c.appendChild(window.DesenhosAcordes.violao(desenho));
+        const casas = criar('div', 'small text-muted font-monospace', desenho.casas.map(x => (x < 0 ? 'x' : x)).join(' '));
+        c.appendChild(casas);
+
+        const acoes = criar('div', 'd-flex gap-1 flex-wrap justify-content-center mt-2');
+        if (desenho.gerado) {
+            acoes.appendChild(botao('<i class="bi bi-save me-1"></i>Salvar na tabela', 'btn-success rounded-pill', () => abrirEditor(desenho, false)));
+        } else {
+            acoes.appendChild(botao('<i class="bi bi-chevron-left"></i>', 'btn-light border', () => mover(desenho, -1), 'Mostrar antes no Variar'));
+            acoes.lastChild.disabled = indice === 0;
+            acoes.appendChild(botao('<i class="bi bi-chevron-right"></i>', 'btn-light border', () => mover(desenho, 1), 'Mostrar depois no Variar'));
+            acoes.lastChild.disabled = indice === total - 1;
+            acoes.appendChild(botao('<i class="bi bi-pencil"></i>', 'btn-light border', () => abrirEditor(desenho, true),
+                                    desenho.origem === 'equipe' ? 'Editar' : 'Editar (cria uma cópia da equipe e esconde este)'));
+            acoes.appendChild(botao(desenho.ativo ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>', 'btn-light border',
+                                    () => post(URLS.ativo(desenho.id)).then(() => buscar(atual.nome)),
+                                    desenho.ativo ? 'Esconder (não aparece nas cifras)' : 'Mostrar de novo'));
+            if (desenho.origem === 'equipe') {
+                acoes.appendChild(botao('<i class="bi bi-trash"></i>', 'btn-outline-danger border-0', () => {
+                    if (confirm('Excluir este desenho?')) post(URLS.excluir(desenho.id)).then(() => buscar(atual.nome));
+                }, 'Excluir'));
+            }
+        }
+        c.appendChild(acoes);
+        return c;
+    }
+
+    function mover(desenho, direcao) {
+        post(URLS.mover(desenho.id), { direcao }).then(() => buscar(atual.nome));
+    }
+
+    function mostrar(dados) {
+        resultado.replaceChildren();
+        if (!dados.ok) {
+            const alerta = criar('div', 'alert alert-warning rounded-3 small', dados.erro);
+            if (dados.grafia !== undefined) {
+                alerta.appendChild(document.createTextNode(' '));
+                alerta.appendChild(botao('Cadastrar grafia', 'btn-warning rounded-pill ms-1', () => {
+                    document.getElementById('campoEscrita').value = dados.grafia;
+                    document.getElementById('grafias').scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('campoTipo').focus();
+                }));
+            }
+            resultado.appendChild(alerta);
+            return;
+        }
+        atual = dados;
+        const caixa = criar('div', 'table-card p-3 p-md-4');
+        const topo = criar('div', 'd-flex flex-wrap align-items-center gap-2 mb-3');
+        const titulo = criar('div', 'me-auto');
+        titulo.appendChild(criar('h4', 'fw-bold mb-0 acorde-admin-titulo', dados.nome));
+        titulo.appendChild(criar('div', 'small text-muted', dados.descricao));
+        topo.appendChild(titulo);
+        topo.appendChild(botao('<i class="bi bi-plus-lg me-1"></i>Novo desenho', 'btn-success rounded-pill px-3',
+                               () => abrirEditor({ casas: [-1, -1, -1, -1, -1, -1], dedos: [0, 0, 0, 0, 0, 0], pestanas: [] }, false)));
+        caixa.appendChild(topo);
+
+        const ativos = dados.desenhos.filter(d => d.ativo);
+        if (dados.desenhos.length) {
+            caixa.appendChild(criar('div', 'small text-secondary fw-semibold mb-2',
+                `Na tabela (${ativos.length} aparece${ativos.length === 1 ? '' : 'm'} nas cifras, nesta ordem no Variar):`));
+            const grade = criar('div', 'acorde-admin-grade');
+            dados.desenhos.forEach((d, i) => grade.appendChild(cartao(d, i, dados.desenhos.length)));
+            caixa.appendChild(grade);
+        } else {
+            caixa.appendChild(criar('p', 'small text-muted', 'Nenhum desenho na tabela para este acorde.'));
+        }
+        if (dados.gerados.length) {
+            caixa.appendChild(criar('div', 'small text-secondary fw-semibold mt-3 mb-2',
+                'Montados automaticamente (aparecem nas cifras enquanto a tabela não tiver um desenho ativo):'));
+            const grade = criar('div', 'acorde-admin-grade');
+            dados.gerados.forEach((d, i) => grade.appendChild(cartao(d, i, dados.gerados.length)));
+            caixa.appendChild(grade);
+        }
+        resultado.appendChild(caixa);
+    }
+
+    document.getElementById('formBusca').addEventListener('submit', e => { e.preventDefault(); buscar(campo.value); });
+    document.querySelectorAll('.exemplo-acorde').forEach(b => b.addEventListener('click', () => buscar(b.textContent)));
+    if (campo.value) buscar(campo.value);
+
+    // ------------------------------------------------------------ editor
+    const modal = new bootstrap.Modal(document.getElementById('modalEditor'));
+    const braco = document.getElementById('editorBraco');
+    const seletorPestana = document.getElementById('editorPestana');
+    const CORDAS = ['E', 'A', 'D', 'G', 'B', 'e'];
+    const LINHAS = 5;
+    let ed = null;  // {id, casas, dedos, pestana, inicio}
+
+    function abrirEditor(desenho, editar) {
+        const apertadas = desenho.casas.filter(c => c > 0);
+        const maior = apertadas.length ? Math.max(...apertadas) : 0;
+        ed = {
+            id: editar ? desenho.id : null,
+            casas: [...desenho.casas],
+            dedos: [...(desenho.dedos || [0, 0, 0, 0, 0, 0])],
+            pestana: (desenho.pestanas || [])[0] ?? '',
+            inicio: maior <= LINHAS ? 1 : Math.min(...apertadas),
+        };
+        document.getElementById('tituloEditor').innerHTML = `<i class="bi bi-pencil me-2"></i>${editar ? 'Editar' : 'Novo'} desenho · ${atual.nome}`;
+        document.getElementById('editorNome').textContent = atual.nome;
+        document.getElementById('editorErro').hidden = true;
+        desenharEditor();
+        modal.show();
+    }
+
+    function desenharEditor() {
+        braco.replaceChildren();
+        // cabeçalho: × / ○ por corda
+        CORDAS.forEach((nome, s) => {
+            const c = ed.casas[s];
+            const b = criar('button', 'editor-corda', c < 0 ? '×' : c === 0 ? '○' : nome);
+            b.type = 'button';
+            b.title = `Corda ${6 - s} (${nome}): ${c < 0 ? 'não toca' : c === 0 ? 'solta' : 'casa ' + c}`;
+            b.addEventListener('click', () => { ed.casas[s] = c < 0 ? 0 : -1; ed.dedos[s] = 0; desenharEditor(); });
+            braco.appendChild(b);
+        });
+        // casas
+        for (let linha = 0; linha < LINHAS; linha++) {
+            const casa = ed.inicio + linha;
+            CORDAS.forEach((nome, s) => {
+                const marcada = ed.casas[s] === casa;
+                const b = criar('button', 'editor-casa' + (marcada ? ' marcada' : '') + (linha === 0 && ed.inicio === 1 ? ' primeira' : ''),
+                                marcada ? (ed.dedos[s] || '●') : '');
+                b.type = 'button';
+                b.setAttribute('aria-label', `Corda ${6 - s}, casa ${casa}`);
+                b.addEventListener('click', () => {
+                    ed.casas[s] = marcada ? 0 : casa;
+                    if (marcada) ed.dedos[s] = 0;
+                    desenharEditor();
+                });
+                braco.appendChild(b);
+            });
+        }
+        // dedos
+        CORDAS.forEach((nome, s) => {
+            const sel = criar('select', 'form-select form-select-sm editor-dedo');
+            sel.setAttribute('aria-label', `Dedo na corda ${6 - s}`);
+            ['–', '1', '2', '3', '4'].forEach((t, v) => sel.add(new Option(t, v)));
+            sel.value = ed.dedos[s] || 0;
+            sel.disabled = !(ed.casas[s] > 0);
+            sel.addEventListener('change', () => { ed.dedos[s] = Number(sel.value); desenharEditor(); });
+            braco.appendChild(sel);
+        });
+        document.getElementById('inicioValor').textContent = ed.inicio;
+        document.getElementById('inicioMenos').disabled = ed.inicio <= 1;
+
+        // pestana: casas com 2 ou mais cordas
+        const candidatas = [...new Set(ed.casas.filter(c => c > 0))].filter(c => ed.casas.filter(x => x === c).length >= 2).sort((a, b) => a - b);
+        seletorPestana.replaceChildren(new Option('Sem pestana', ''));
+        candidatas.forEach(c => seletorPestana.add(new Option(`Casa ${c}`, c)));
+        if (!candidatas.includes(Number(ed.pestana))) ed.pestana = '';
+        seletorPestana.value = ed.pestana;
+
+        document.getElementById('editorPrevia').replaceChildren(window.DesenhosAcordes.violao({
+            casas: ed.casas, dedos: ed.dedos, pestanas: ed.pestana === '' ? [] : [Number(ed.pestana)],
+        }));
+    }
+
+    seletorPestana.addEventListener('change', () => { ed.pestana = seletorPestana.value; desenharEditor(); });
+    document.getElementById('inicioMenos').addEventListener('click', () => { ed.inicio = Math.max(1, ed.inicio - 1); desenharEditor(); });
+    document.getElementById('inicioMais').addEventListener('click', () => { ed.inicio = Math.min(20, ed.inicio + 1); desenharEditor(); });
+
+    document.getElementById('editorSalvar').addEventListener('click', () => {
+        post(URLS.salvar, {
+            id: ed.id, raiz: atual.raiz, tipo: atual.tipo, baixo: atual.baixo,
+            casas: ed.casas, dedos: ed.dedos, pestanas: ed.pestana === '' ? [] : [Number(ed.pestana)],
+        }, true).then(r => {
+            if (!r.ok) {
+                const erro = document.getElementById('editorErro');
+                erro.textContent = r.erro;
+                erro.hidden = false;
+                return;
+            }
+            modal.hide();
+            buscar(atual.nome);
+        });
+    });
+
+    // ------------------------------------------------------------ filtro das grafias
+    document.getElementById('filtroGrafias').addEventListener('input', e => {
+        const termo = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('.linha-grafia').forEach(l => { l.hidden = termo && !l.dataset.busca.includes(termo); });
+    });
+})();
+</script>
+{% endblock %}

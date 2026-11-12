@@ -8,7 +8,6 @@
 // Escalado num instrumento com "Nenhum" (ex.: voz): os desenhos começam fechados.
 (function () {
     const blocos = document.querySelectorAll('.acordes-bloco');
-    if (!blocos.length) return;
 
     const ler = (chave, padrao) => {
         try { const v = localStorage.getItem(chave); return v === null ? padrao : v; } catch (e) { return padrao; }
@@ -225,7 +224,11 @@
         return item;
     }
 
+    // Usado também pela tela de cadastro de acordes (líderes)
+    window.DesenhosAcordes = { violao: desenhoViolao };
+
     // ------------------------------------------------------------ montagem
+    if (!blocos.length) return;
     const primeiro = blocos[0].dataset;
     const doCulto = INSTRUMENTOS.includes(primeiro.desenhoEscala) ? primeiro.desenhoEscala : '';
     const salvo = ler('cifra-instrumento', '');
