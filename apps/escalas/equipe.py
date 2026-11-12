@@ -97,9 +97,11 @@ def _escalas_no_periodo(inicio, fim):
 # ---------------------------------------------------------------- views
 
 @login_required
-@requer_lider
 def escala_equipe(request):
-    """Grade do mês: datas nas linhas, instrumentos nas colunas."""
+    """Grade do mês: datas nas linhas, instrumentos nas colunas.
+
+    Todos podem ver (e exportar); só os líderes alteram, adicionam datas, salvam e publicam.
+    """
     inicio = _mes_da_requisicao(request.GET.get('mes'))
     fim = _fim_do_mes(inicio)
 
@@ -163,6 +165,7 @@ def escala_equipe(request):
     anterior = (inicio - timedelta(days=1)).replace(day=1)
     proximo = fim + timedelta(days=1)
 
+    pode_editar = request.user.is_lider
     return render(request, 'escalas/equipe.html', {
         'mes': inicio,
         'mes_anterior': anterior,
@@ -170,7 +173,8 @@ def escala_equipe(request):
         'instrumentos': instrumentos,
         'linhas': linhas,
         'alertas': alertas,
-        'dados_modal': dados_modal,
+        'pode_editar': pode_editar,
+        'dados_modal': dados_modal if pode_editar else None,  # só os líderes usam o modal de edição
         'limite': LIMITE_ESCALAS_MES,
         'hoje': timezone.localdate(),
         'publicacao': publicacao,
@@ -332,7 +336,6 @@ def escala_equipe_publicar(request):
 
 
 @login_required
-@requer_lider
 def escala_equipe_exportar(request):
     """Tabela no estilo da planilha (um bloco por mês) para baixar como imagem."""
     hoje = timezone.localdate()

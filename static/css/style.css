@@ -422,6 +422,10 @@ button, input, select, textarea {
     background: #f0fdf4;
 }
 
+/* Integrantes (não líderes) só veem a escala: célula sem cara de botão */
+.celula-escala.celula-leitura:hover { background: transparent; }
+.celula-escala .membro-eu { color: var(--primary-green); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
 .celula-escala .membro {
     white-space: nowrap;
 }

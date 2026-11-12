@@ -13,13 +13,21 @@
             <a href="{% url 'escala_equipe_exportar' %}?inicio={{ mes|date:'Y-m-d' }}" class="btn btn-outline-success rounded-pill px-4 flex-grow-1">
                 <i class="bi bi-image me-2"></i>Exportar
             </a>
+            {% if pode_editar %}
             <button type="button" class="btn-login btn-acao flex-grow-1" data-bs-toggle="modal" data-bs-target="#modalData">
                 <i class="bi bi-calendar-plus me-2"></i>Adicionar data
             </button>
+            {% endif %}
         </div>
     </div>
 
-    {% if linhas %}
+    {% if linhas and not pode_editar and not publicacao %}
+    <div class="alert alert-warning rounded-3 small py-2">
+        <i class="bi bi-hourglass-split me-1"></i>A escala de {{ mes|date:"F"|lower }} ainda está sendo montada e pode mudar.
+    </div>
+    {% endif %}
+
+    {% if linhas and pode_editar %}
     <!-- Publicar: avisa todos por notificação -->
     <form method="post" action="{% url 'escala_equipe_publicar' %}" class="table-card px-3 py-2 mb-3 d-flex flex-wrap align-items-center gap-2" id="formPublicar"
           onsubmit="return confirm('Publicar a escala de {{ mes|date:"F"|lower }}? Todos com notificações ativadas serão avisados (quem está escalado recebe as suas datas).')">
@@ -39,6 +47,7 @@
     </form>
     {% endif %}
 
+    {% if pode_editar %}
     <!-- Alterações ainda não salvas -->
     <div class="barra-salvar" id="barraSalvar" hidden>
         <span class="small fw-semibold"><i class="bi bi-pencil-square me-1"></i><span id="textoAlteracoes"></span></span>
@@ -47,6 +56,7 @@
             <button type="button" class="btn btn-sm btn-success rounded-pill px-3" id="btnSalvar"><i class="bi bi-check-lg me-1"></i>Salvar</button>
         </div>
     </div>
+    {% endif %}
 
     <!-- Navegação entre meses -->
     <div class="d-flex align-items-center justify-content-between mb-3 table-card px-2 py-2">
@@ -63,8 +73,8 @@
 
     <p class="small text-muted mb-2">
         <i class="bi bi-star-fill text-warning"></i> Ministrante &nbsp;·&nbsp;
-        <span class="text-danger fw-semibold">Vermelho</span> = escalado {{ limite }}x ou mais no mês &nbsp;·&nbsp;
-        Toque em uma célula para editar e depois em <strong>Salvar</strong>.
+        <span class="text-danger fw-semibold">Vermelho</span> = escalado {{ limite }}x ou mais no mês
+        {% if pode_editar %}&nbsp;·&nbsp; Toque em uma célula para editar e depois em <strong>Salvar</strong>.{% endif %}
     </p>
 
     {% if linhas %}
@@ -87,25 +97,27 @@
                                     <span class="fw-bold fs-5 d-block lh-1">{{ linha.escala.data|date:"d" }}</span>
                                     <small class="text-muted">{{ linha.escala.data|date:"D" }}</small>
                                 </a>
+                                {% if pode_editar %}
                                 <form method="post" action="{% url 'escala_excluir' linha.escala.pk %}" class="m-0"
                                       onsubmit="return confirm('Excluir o culto de {{ linha.escala.data|date:"d/m/Y" }}? A escala e as músicas desse dia serão apagadas.')">
                                     {% csrf_token %}
                                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                     <button type="submit" class="btn btn-sm btn-link text-danger p-0" aria-label="Excluir data"><i class="bi bi-trash"></i></button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                         {% for celula in linha.celulas %}
                         <td class="p-0">
-                            <button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
+                            {% if pode_editar %}<button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">{% else %}<div class="celula-escala celula-leitura">{% endif %}
                                 <span class="membros-celula" data-vazio="—">
                                     {% for m in celula.membros %}
-                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
                                     {% empty %}
                                     <span class="text-muted opacity-50">—</span>
                                     {% endfor %}
                                 </span>
-                            </button>
+                            {% if pode_editar %}</button>{% else %}</div>{% endif %}
                         </td>
                         {% endfor %}
                     </tr>
@@ -123,25 +135,27 @@
                 <a href="{% url 'escala_visualizar' linha.escala.pk %}" class="text-decoration-none text-dark fw-bold">
                     {{ linha.escala.data|date:"d/m" }} <span class="fw-normal text-muted small">· {{ linha.escala.data|date:"l" }}</span>
                 </a>
+                {% if pode_editar %}
                 <form method="post" action="{% url 'escala_excluir' linha.escala.pk %}" class="m-0"
                       onsubmit="return confirm('Excluir o culto de {{ linha.escala.data|date:"d/m/Y" }}? A escala e as músicas desse dia serão apagadas.')">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <button type="submit" class="btn btn-sm btn-link text-danger" aria-label="Excluir data"><i class="bi bi-trash"></i></button>
                 </form>
+                {% endif %}
             </div>
             {% for celula in linha.celulas %}
-            <button type="button" class="celula-escala celula-mobile" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">
+            {% if pode_editar %}<button type="button" class="celula-escala celula-mobile" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">{% else %}<div class="celula-escala celula-mobile celula-leitura">{% endif %}
                 <span class="text-secondary small fw-semibold instrumento-label">{{ celula.instrumento.nome }}</span>
                 <span class="flex-grow-1 text-end membros-celula" data-vazio="Toque para escalar">
                     {% for m in celula.membros %}
-                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
                     {% empty %}
-                    <span class="text-muted opacity-50">Toque para escalar</span>
+                    <span class="text-muted opacity-50">{% if pode_editar %}Toque para escalar{% else %}—{% endif %}</span>
                     {% endfor %}
                 </span>
-                <i class="bi bi-chevron-right text-muted small"></i>
-            </button>
+                {% if pode_editar %}<i class="bi bi-chevron-right text-muted small"></i>
+            </button>{% else %}</div>{% endif %}
             {% endfor %}
         </div>
         {% endfor %}
@@ -149,11 +163,12 @@
     {% else %}
     <div class="table-card text-center py-5 px-3 text-muted">
         <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
-        Nenhum culto em {{ mes|date:"F" }}. Use <strong>Adicionar data</strong> para começar.
+        Nenhum culto em {{ mes|date:"F" }}.{% if pode_editar %} Use <strong>Adicionar data</strong> para começar.{% endif %}
     </div>
     {% endif %}
 </div>
 
+{% if pode_editar %}
 <!-- Modal: adicionar data -->
 <div class="modal fade" id="modalData" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -202,9 +217,11 @@
 </div>
 
 {{ dados_modal|json_script:"dadosEscala" }}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if pode_editar %}
 <script>
 (function () {
     const dados = JSON.parse(document.getElementById('dadosEscala').textContent);
@@ -457,4 +474,5 @@
     desenhar();
 })();
 </script>
+{% endif %}
 {% endblock %}
