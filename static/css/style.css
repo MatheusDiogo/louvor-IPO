@@ -983,6 +983,24 @@ main.container {
 
 .acordes-alternar[aria-expanded="false"] .acordes-seta { transform: rotate(180deg); }
 
+.acordes-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 8px;
+    margin-bottom: 4px;
+}
+
+.acordes-topo .acordes-alternar { padding-bottom: 0; }
+
+.acordes-instrumentos .btn {
+    font-size: 11.5px;
+    padding: 1px 9px;
+}
+
+.cifra-leitor.sem-diagramas .acordes-instrumentos { display: none; }
+
 .acorde-item {
     flex: 0 0 auto;
     display: flex;
@@ -1021,6 +1039,19 @@ main.container {
 .acorde-svg .acorde-casa-inicial { fill: #6c757d; font-size: 8px; text-anchor: middle; font-family: system-ui, sans-serif; }
 .acorde-svg .acorde-marca { fill: #6c757d; font-size: 9px; text-anchor: middle; font-family: system-ui, sans-serif; }
 .acorde-svg .acorde-solta { fill: none; stroke: #6c757d; stroke-width: 1; }
+.acorde-svg .acorde-solta-cheia { fill: #1a2e1a; }
+.acorde-svg .acorde-quinta { fill: #fff; stroke: #166534; stroke-width: 1.4; }
+
+/* Teclado: baixo (mão esquerda) e notas do acorde (mão direita) */
+.acorde-teclado .tecla-branca { fill: #fff; stroke: #9aa5a0; stroke-width: 0.8; }
+.acorde-teclado .tecla-preta { fill: #2b2f2c; }
+.acorde-teclado .tecla-acorde { fill: #1a2e1a; }
+.acorde-teclado .tecla-branca.tecla-acorde { fill: #4ade80; }
+.acorde-teclado .tecla-preta.tecla-acorde { fill: #16a34a; }
+.acorde-teclado .tecla-branca.tecla-baixo { fill: #93c5fd; }
+.acorde-teclado .tecla-preta.tecla-baixo { fill: #2563eb; }
+.acorde-item.acorde-teclado { min-width: 124px; }
+.acorde-item.acorde-teclado .acorde-botao { padding: 6px 4px; }
 
 .acorde-variar, .acorde-aviso, .acorde-vazio {
     font-size: 10.5px;

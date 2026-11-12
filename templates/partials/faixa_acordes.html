@@ -1,9 +1,17 @@
-{# Faixa com os diagramas dos acordes da música (desenhada pelo static/js/acordes.js). Requer: diagramas, id #}
+{# Faixa com os desenhos dos acordes da música (desenhada pelo static/js/acordes.js). Requer: diagramas, id #}
+{# Opcionais: desenho_escala (instrumento da pessoa no culto), desenho_padrao (do cadastro dela) #}
 {% if diagramas %}{% with id_txt=id|stringformat:"s" %}{% with id_script="diagramas-"|add:id_txt %}
-<div class="acordes-bloco">
-    <button type="button" class="acordes-alternar" data-diagramas-botao aria-expanded="true">
-        <i class="bi bi-grid-3x3-gap me-1"></i>Desenhos dos acordes <i class="bi bi-chevron-up acordes-seta"></i>
-    </button>
+<div class="acordes-bloco" data-desenho-escala="{{ desenho_escala|default:'' }}" data-desenho-padrao="{{ desenho_padrao|default:'' }}">
+    <div class="acordes-topo">
+        <button type="button" class="acordes-alternar" data-diagramas-botao aria-expanded="true">
+            <i class="bi bi-grid-3x3-gap me-1"></i>Desenhos dos acordes <i class="bi bi-chevron-up acordes-seta"></i>
+        </button>
+        <div class="btn-group btn-group-sm acordes-instrumentos" role="group" aria-label="Instrumento dos desenhos">
+            <button type="button" class="btn btn-light border" data-instrumento="violao">Violão</button>
+            <button type="button" class="btn btn-light border" data-instrumento="baixo">Baixo</button>
+            <button type="button" class="btn btn-light border" data-instrumento="teclado">Teclado</button>
+        </div>
+    </div>
     <div class="acordes-faixa" data-diagramas="{{ id_script }}" role="list" aria-label="Acordes da música"></div>
 </div>
 {{ diagramas|json_script:id_script }}

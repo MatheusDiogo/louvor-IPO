@@ -10,7 +10,7 @@ from .models import Instrumento
 @requer_lider
 def instrumentos_view(request):
     instrumentos = Instrumento.objects.all()
-    return render(request, "instrumentos.html", {"instrumentos": instrumentos})
+    return render(request, "instrumentos.html", {"instrumentos": instrumentos, "desenhos": Instrumento.DESENHOS})
 
 
 @login_required
@@ -28,6 +28,9 @@ def salvar_instrumento(request):
                 ultimo = Instrumento.objects.order_by("-ordem").first()
                 instrumento = Instrumento(ordem=(ultimo.ordem + 1) if ultimo else 1)
             instrumento.nome = nome
+            desenho = request.POST.get("desenho", "")
+            if desenho in dict(Instrumento.DESENHOS):
+                instrumento.desenho = desenho
             if ordem.isdigit():
                 instrumento.ordem = int(ordem)
             instrumento.save()

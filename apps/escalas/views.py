@@ -12,7 +12,7 @@ from .models import Escala, EscalaMusica, EscalaIntegrante
 from apps.musicas.cifra import (
     TONS_MAIORES, TONS_MENORES, letra_para_busca, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base,
 )
-from apps.musicas.acordes import diagramas_da_musica, mapa_de_nomes
+from apps.musicas.acordes import desenho_do_cadastro, diagramas_da_musica, mapa_de_nomes
 from apps.musicas.cifra_pdf import gerar_pdf
 from apps.musicas.models import Musica
 from apps.core.decorators import requer_lider
@@ -279,7 +279,13 @@ def escala_cifras(request, pk):
     for item in itens:
         item.cifra_html = renderizar_html(item.musica.cifra, item.musica.tom, item.tom)
         item.diagramas = diagramas_da_musica(item.musica.cifra, item.musica.tom, item.tom, nomes)
-    return render(request, 'escalas/escala_cifras.html', {'escala': escala, 'itens': itens})
+    # Desenhos do instrumento em que a pessoa está escalada neste culto (violão, baixo, teclado ou nenhum)
+    minha = escala.integrantes.filter(usuario=request.user).select_related('instrumento').first()
+    return render(request, 'escalas/escala_cifras.html', {
+        'escala': escala, 'itens': itens,
+        'desenho_escala': minha.instrumento.desenho if minha else '',
+        'desenho_padrao': desenho_do_cadastro(request.user),
+    })
 
 
 @login_required

@@ -48,6 +48,32 @@ NOMES_PADRAO = {
 }
 
 
+# Notas de cada tipo de acorde, em semitons a partir da fundamental (usado no baixo e no teclado)
+FORMULAS = {
+    'major': [0, 4, 7], 'minor': [0, 3, 7], 'dim': [0, 3, 6], 'dim7': [0, 3, 6, 9], 'aug': [0, 4, 8],
+    'sus2': [0, 2, 7], 'sus4': [0, 5, 7], '7sus4': [0, 5, 7, 10], 'add9': [0, 4, 7, 14], 'madd9': [0, 3, 7, 14],
+    '6': [0, 4, 7, 9], '69': [0, 4, 7, 9, 14], 'm6': [0, 3, 7, 9], 'm69': [0, 3, 7, 9, 14],
+    '7': [0, 4, 7, 10], '7b5': [0, 4, 6, 10], 'aug7': [0, 4, 8, 10], '9': [0, 4, 7, 10, 14],
+    '9b5': [0, 4, 6, 10, 14], 'aug9': [0, 4, 8, 10, 14], '7b9': [0, 4, 7, 10, 13], '7#9': [0, 4, 7, 10, 15],
+    '11': [0, 4, 7, 10, 14, 17], '9#11': [0, 4, 7, 10, 14, 18], '13': [0, 4, 7, 10, 14, 21],
+    'alt': [0, 4, 6, 10, 13], '7sg': [0, 4, 7, 10],
+    'maj7': [0, 4, 7, 11], 'maj7b5': [0, 4, 6, 11], 'maj7#5': [0, 4, 8, 11], 'maj9': [0, 4, 7, 11, 14],
+    'maj11': [0, 4, 7, 11, 14, 17], 'maj13': [0, 4, 7, 11, 14, 21],
+    'm7': [0, 3, 7, 10], 'm7b5': [0, 3, 6, 10], 'm9': [0, 3, 7, 10, 14], 'm11': [0, 3, 7, 10, 14, 17],
+    'mmaj7': [0, 3, 7, 11], 'mmaj7b5': [0, 3, 6, 11], 'mmaj9': [0, 3, 7, 11, 14], 'mmaj11': [0, 3, 7, 11, 14, 17],
+}
+
+
+def notas_do_acorde(raiz, tipo):
+    """Notas (0-11) do acorde, na ordem da fórmula: fundamental, terça, quinta... Tipo desconhecido -> só a fundamental."""
+    notas = []
+    for intervalo in FORMULAS.get(tipo, [0]):
+        nota = (raiz + intervalo) % 12
+        if nota not in notas:
+            notas.append(nota)
+    return notas
+
+
 # ---------------------------------------------------------------- importação (usada pela migração)
 
 def importar_base(DesenhoAcorde, NomeAcorde=None, arquivo=ARQUIVO_BASE):
@@ -192,10 +218,16 @@ def desenhos_violao(nomes_acordes, nomes=None):
 
     resultado = {}
     for nome, analise in analisados.items():
-        if not analise or not analise[1]:
-            resultado[nome] = {'desenhos': [], 'aviso': 'Sem desenho para este acorde'}
+        if not analise:
+            resultado[nome] = {'desenhos': [], 'aviso': 'Sem desenho para este acorde', 'notas': [], 'baixo': None}
             continue
         raiz, tipo, baixo = analise
+        # Para o baixo e o teclado: notas do acorde e a nota mais grave (o baixo, ou a fundamental)
+        musical = {'notas': notas_do_acorde(raiz, tipo) if tipo else [raiz],
+                   'baixo': baixo if baixo is not None else raiz, 'tipo_conhecido': bool(tipo)}
+        if not tipo:
+            resultado[nome] = {'desenhos': [], 'aviso': 'Sem desenho para este acorde', **musical}
+            continue
         exatos = linhas.get((raiz, tipo, baixo), [])
         desenhos = [_como_dict(d) for d in exatos]
         aviso = ''
@@ -213,8 +245,19 @@ def desenhos_violao(nomes_acordes, nomes=None):
                     aviso = f'Baixo em {NOMES_NOTAS[baixo]}'
         if not desenhos:
             aviso = aviso or 'Sem desenho para este acorde'
-        resultado[nome] = {'desenhos': desenhos, 'aviso': aviso}
+        resultado[nome] = {'desenhos': desenhos, 'aviso': aviso, **musical}
     return resultado
+
+
+INSTRUMENTOS_COM_DESENHO = ('violao', 'baixo', 'teclado')
+
+
+def desenho_do_cadastro(usuario):
+    """Desenho preferido pelo cadastro da pessoa: o do primeiro instrumento dela que tem desenho definido."""
+    for instrumento in usuario.instrumentos.all():
+        if instrumento.desenho in INSTRUMENTOS_COM_DESENHO:
+            return instrumento.desenho
+    return ''
 
 
 def diagramas_da_musica(cifra, tom_original='', tom_destino='', nomes=None):

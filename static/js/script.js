@@ -23,6 +23,7 @@ function novoInstrumento() {
     document.getElementById("instrumento_id").value = "";
     document.getElementById("instrumento_nome").value = "";
     document.getElementById("instrumento_ordem").value = "";
+    document.getElementById("instrumento_desenho").value = "";
     abrirModal("modalInstrumento");
 }
 
@@ -30,6 +31,7 @@ function editarInstrumento(btn) {
     document.getElementById("instrumento_id").value = btn.dataset.id;
     document.getElementById("instrumento_nome").value = btn.dataset.nome;
     document.getElementById("instrumento_ordem").value = btn.dataset.ordem;
+    document.getElementById("instrumento_desenho").value = btn.dataset.desenho || "";
     abrirModal("modalInstrumento");
 }
 
