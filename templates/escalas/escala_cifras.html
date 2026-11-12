@@ -45,9 +45,6 @@
             </button>
             {% endif %}
         </div>
-        {% if item.musica.link_youtube %}
-        <a href="{{ item.musica.link_youtube }}" target="_blank" rel="noopener" class="small text-danger text-decoration-none d-inline-block mb-2"><i class="bi bi-youtube me-1"></i>Ouvir no YouTube</a>
-        {% endif %}
         {% if item.musica.cifra %}
         <div class="cifra-leitor">{% include "partials/faixa_acordes.html" with diagramas=item.diagramas id=item.pk %}{{ item.cifra_html|safe }}</div>
         {% else %}
