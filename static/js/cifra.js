@@ -247,15 +247,183 @@
     controles.className = 'foco-controles';
     controles.hidden = true;
     controles.innerHTML = `
-        <button type="button" class="btn btn-light border" data-foco-acao="anterior" aria-label="Música anterior"><i class="bi bi-chevron-left"></i></button>
-        <span class="foco-posicao small fw-semibold text-truncate"></span>
-        <button type="button" class="btn btn-light border" data-foco-acao="proxima" aria-label="Próxima música"><i class="bi bi-chevron-right"></i></button>
-        <span class="foco-separador"></span>
-        <button type="button" class="btn btn-light border" data-cifra="menor" aria-label="Diminuir letra">A−</button>
-        <button type="button" class="btn btn-light border" data-cifra="maior" aria-label="Aumentar letra">A+</button>
-        <button type="button" class="btn btn-light border" data-cifra="acordes" aria-label="Mostrar/ocultar acordes"><i class="bi bi-music-note-beamed"></i></button>
-        <button type="button" class="btn btn-success" data-foco-acao="fechar" aria-label="Sair da tela cheia"><i class="bi bi-x-lg"></i></button>`;
+        <div class="foco-linha foco-rolagem">
+            <button type="button" class="btn btn-light border" data-rolar="menos" aria-label="Rolar mais devagar"><i class="bi bi-dash-lg"></i></button>
+            <button type="button" class="btn btn-success foco-play" data-rolar="play" aria-label="Rolar a cifra"><i class="bi bi-play-fill"></i></button>
+            <span class="foco-velocidade small fw-semibold" aria-live="polite"></span>
+            <button type="button" class="btn btn-light border" data-rolar="mais" aria-label="Rolar mais rápido"><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <div class="foco-linha">
+            <button type="button" class="btn btn-light border" data-foco-acao="anterior" aria-label="Música anterior"><i class="bi bi-chevron-left"></i></button>
+            <span class="foco-posicao small fw-semibold text-truncate"></span>
+            <button type="button" class="btn btn-light border" data-foco-acao="proxima" aria-label="Próxima música"><i class="bi bi-chevron-right"></i></button>
+            <span class="foco-separador"></span>
+            <button type="button" class="btn btn-light border" data-cifra="menor" aria-label="Diminuir letra">A−</button>
+            <button type="button" class="btn btn-light border" data-cifra="maior" aria-label="Aumentar letra">A+</button>
+            <button type="button" class="btn btn-light border" data-cifra="acordes" aria-label="Mostrar/ocultar acordes"><i class="bi bi-music-note-beamed"></i></button>
+            <button type="button" class="btn btn-success" data-foco-acao="fechar" aria-label="Sair da tela cheia"><i class="bi bi-x-lg"></i></button>
+        </div>`;
     document.body.appendChild(controles);
+
+    // ---------------------------------------------------------------- Rolagem automática ("play")
+    // Velocidade de 1 a 10, guardada por música neste aparelho (cada músico escolhe a sua).
+    // Só aparece quando a cifra não cabe na tela. O play continua ligado mesmo no fim da música
+    // (se o músico voltar para o começo, ela segue rolando); só desliga ao tocar de novo,
+    // trocar de música ou sair da tela cheia. Enquanto rola, a tela fica acesa.
+    // O menu some sozinho depois de alguns segundos; tocar na cifra mostra/esconde.
+    const VEL_MIN = 1, VEL_MAX = 10, VEL_PADRAO = 4;
+    const pixelsPorSegundo = nivel => 6 * Math.pow(1.28, nivel - 1);  // 1 ≈ 6 px/s ... 10 ≈ 55 px/s
+    const ESCONDER_MENU_EM = 5000;
+    let rolando = false, velocidade = VEL_PADRAO, posicao = 0, ultimoQuadro = 0, arrastando = false;
+    let travaDaRolagem = false, esperaMenu = null;
+
+    const chaveVelocidade = () => 'cifra-rolagem:' + (focada?.dataset.musica || 'geral');
+    function carregarVelocidade() {
+        const salva = parseInt(ler(chaveVelocidade(), ler('cifra-rolagem-ultima', String(VEL_PADRAO))), 10);
+        velocidade = Math.min(VEL_MAX, Math.max(VEL_MIN, salva || VEL_PADRAO));
+        mostrarVelocidade();
+    }
+    function mostrarVelocidade() {
+        controles.querySelector('.foco-velocidade').textContent = `Vel. ${velocidade}`;
+        controles.querySelector('[data-rolar="menos"]').disabled = velocidade <= VEL_MIN;
+        controles.querySelector('[data-rolar="mais"]').disabled = velocidade >= VEL_MAX;
+        const play = controles.querySelector('[data-rolar="play"]');
+        play.innerHTML = rolando ? '<i class="bi bi-pause-fill"></i>' : '<i class="bi bi-play-fill"></i>';
+        play.setAttribute('aria-label', rolando ? 'Pausar a rolagem' : 'Rolar a cifra');
+    }
+    function mudarVelocidade(passo) {
+        velocidade = Math.min(VEL_MAX, Math.max(VEL_MIN, velocidade + passo));
+        gravar(chaveVelocidade(), String(velocidade));
+        gravar('cifra-rolagem-ultima', String(velocidade));  // ponto de partida para músicas novas
+        mostrarVelocidade();
+    }
+
+    const noFim = el => el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+
+    // O músico pode rolar à vontade (dedo, roda do mouse, barra) com o play ligado: a cada quadro,
+    // se a tela não está onde a rolagem deixou, foi ele que mexeu -> a rolagem adota a nova posição.
+    // Durante o toque e logo depois (embalo do dedo), a rolagem não empurra.
+    let ultimoDefinido = 0, esperarAte = 0;
+    const segurarRolagem = ms => { esperarAte = Math.max(esperarAte, performance.now() + ms); };
+
+    function quadro(agora) {
+        if (!rolando || !focada) return;
+        const passou = Math.min(0.1, (agora - ultimoQuadro) / 1000);  // segundos (limita se a aba ficou parada)
+        ultimoQuadro = agora;
+        const atual = focada.scrollTop;
+        if (Math.abs(atual - ultimoDefinido) > 1) {   // mexeram na rolagem: segue de onde está agora
+            posicao = atual;
+            segurarRolagem(600);
+        }
+        if (arrastando || agora < esperarAte) {
+            posicao = atual;
+        } else {
+            const limite = focada.scrollHeight - focada.clientHeight;
+            posicao = Math.min(limite, posicao + pixelsPorSegundo(velocidade) * passou);  // no fim, fica parada esperando
+            focada.scrollTop = posicao;
+        }
+        ultimoDefinido = focada.scrollTop;
+        // Chegou ao fim: o botão da próxima música fica em destaque (o menu não aparece sozinho)
+        const fim = noFim(focada);
+        const proxima = controles.querySelector('[data-foco-acao="proxima"]');
+        proxima.classList.toggle('destaque', fim && !proxima.disabled && !proxima.hidden);
+        requestAnimationFrame(quadro);
+    }
+
+    async function iniciarRolagem() {
+        if (!focada || rolando) return;
+        rolando = true;
+        posicao = focada.scrollTop;
+        ultimoDefinido = focada.scrollTop;
+        esperarAte = 0;
+        ultimoQuadro = performance.now();
+        mostrarVelocidade();
+        requestAnimationFrame(quadro);
+        agendarEsconderMenu();
+        if (!telaAcesa() && 'wakeLock' in navigator) {  // tela acesa enquanto rola
+            try {
+                trava = await navigator.wakeLock.request('screen');
+                travaDaRolagem = true;
+                trava.addEventListener('release', () => { trava = null; atualizarBotaoTela(); });
+                atualizarBotaoTela();
+            } catch (e) { /* sem suporte */ }
+        }
+    }
+
+    function pararRolagem() {
+        if (!rolando) return;
+        rolando = false;
+        controles.querySelector('[data-foco-acao="proxima"]').classList.remove('destaque');
+        mostrarVelocidade();
+        mostrarMenu();
+        if (travaDaRolagem && trava) {
+            trava.release().catch(() => {});
+            trava = null;
+            atualizarBotaoTela();
+        }
+        travaDaRolagem = false;
+    }
+
+    // Menu que some sozinho depois de alguns segundos (tocando ou não)
+    function esconderMenu() {
+        clearTimeout(esperaMenu);
+        controles.classList.add('foco-controles-oculto');
+    }
+    function mostrarMenu() {
+        controles.classList.remove('foco-controles-oculto');
+        agendarEsconderMenu();
+    }
+    function agendarEsconderMenu() {
+        clearTimeout(esperaMenu);
+        if (focada) esperaMenu = setTimeout(esconderMenu, ESCONDER_MENU_EM);
+    }
+
+    // A rolagem só aparece quando a cifra passa da altura da tela
+    function atualizarRolagemVisivel() {
+        if (!focada) return;
+        const rola = focada.scrollHeight > focada.clientHeight + 4;
+        controles.querySelector('.foco-rolagem').hidden = !rola;
+        if (!rola) pararRolagem();
+    }
+
+    controles.addEventListener('click', e => {
+        const acao = e.target.closest('[data-rolar]')?.dataset.rolar;
+        if (acao === 'play') (rolando ? pararRolagem() : iniciarRolagem());
+        if (acao === 'menos') mudarVelocidade(-1);
+        if (acao === 'mais') mudarVelocidade(1);
+        mostrarMenu();
+    });
+
+    // A altura da cifra muda com A−/A+, acordes, desenhos ou girando o celular: confere se ainda rola
+    document.addEventListener('click', () => { if (focada) setTimeout(atualizarRolagemVisivel, 80); });
+    window.addEventListener('resize', () => { if (focada) setTimeout(atualizarRolagemVisivel, 250); });
+
+    // Tocar na cifra (fora de botões e links): menu aparecendo -> some; menu escondido -> aparece
+    document.addEventListener('click', e => {
+        if (!focada || !focada.contains(e.target)) return;
+        if (e.target.closest('button, a, select, input, label')) return;
+        if (controles.classList.contains('foco-controles-oculto')) mostrarMenu();
+        else esconderMenu();
+    });
+
+    // Arrastar a cifra com o dedo durante a rolagem: a posição segue o dedo e a rolagem continua dali
+    const comecouArrastar = e => { if (focada && focada.contains(e.target)) arrastando = true; };
+    const terminouArrastar = () => {
+        if (!arrastando) return;
+        arrastando = false;
+        segurarRolagem(900);  // deixa o embalo do dedo terminar antes de voltar a rolar
+    };
+    document.addEventListener('touchstart', comecouArrastar, { passive: true });
+    document.addEventListener('touchend', terminouArrastar, { passive: true });
+    document.addEventListener('touchcancel', terminouArrastar, { passive: true });
+    // Roda do mouse, barra de rolagem e teclado (computador)
+    ['wheel', 'mousedown', 'keydown'].forEach(tipo => document.addEventListener(tipo, e => {
+        if (focada && rolando && (tipo === 'keydown' || focada.contains(e.target))) segurarRolagem(600);
+    }, { passive: true }));
+    // Saiu do app/aba no meio da música: pausa (ao voltar, é só dar play de novo)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') pararRolagem();
+    });
 
     const secoesFoco = () => Array.from(document.querySelectorAll('[data-foco]'));
 
@@ -269,16 +437,21 @@
         controles.querySelector('[data-foco-acao="proxima"]').disabled = i >= lista.length - 1;
         controles.querySelector('.foco-posicao').textContent = varias ? `${i + 1} de ${lista.length}` : '';
         aplicar();
+        atualizarRolagemVisivel();
     }
 
     function abrirFoco(secao, telaCheia) {
+        pararRolagem();
         if (focada) focada.classList.remove('em-foco');
         focada = secao;
         secao.classList.add('em-foco');
         document.body.classList.add('modo-foco');
         secao.scrollTop = 0;
         controles.hidden = false;
+        controles.querySelector('[data-foco-acao="proxima"]').classList.remove('destaque');
         atualizarControles();
+        carregarVelocidade();
+        mostrarMenu();
         const raiz = document.documentElement;
         if (telaCheia && !document.fullscreenElement && raiz.requestFullscreen) {
             raiz.requestFullscreen().catch(() => { /* sem suporte: fica só a cobertura da página */ });
@@ -287,6 +460,7 @@
 
     function fecharFoco() {
         if (!focada) return;
+        pararRolagem();
         const secao = focada;
         focada = null;
         secao.classList.remove('em-foco');
@@ -311,6 +485,7 @@
     });
     document.addEventListener('keydown', e => {
         if (!focada) return;
+        if (e.key === ' ') { e.preventDefault(); rolando ? pararRolagem() : iniciarRolagem(); }
         if (e.key === 'Escape') fecharFoco();
         if (e.key === 'ArrowRight') mover(1);
         if (e.key === 'ArrowLeft') mover(-1);

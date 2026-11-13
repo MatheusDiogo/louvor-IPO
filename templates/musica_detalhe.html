@@ -58,7 +58,7 @@
         </a>
     </div>
 
-    <div class="table-card p-3 p-md-4 caixa-cifra" id="cifraMusica" data-foco data-foco-titulo="{{ musica.nome }}">
+    <div class="table-card p-3 p-md-4 caixa-cifra" id="cifraMusica" data-foco data-foco-titulo="{{ musica.nome }}" data-musica="{{ musica.id }}">
         <div class="foco-cabecalho">
             <h4 class="fw-bold mb-0" style="color: var(--primary-green);">{{ musica.nome }}</h4>
             {% if tom %}<span class="badge rounded-pill bg-success px-3 py-2 fs-6">{{ tom }}</span>{% endif %}

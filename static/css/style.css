@@ -777,6 +777,47 @@ body.modo-foco {
     display: none;
 }
 
+/* Duas linhas: rolagem automática em cima, navegação e letra embaixo */
+.foco-controles {
+    flex-direction: column;
+    border-radius: 22px;
+    transition: opacity 0.35s, transform 0.35s;
+}
+
+.foco-linha {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: inherit;
+}
+
+.foco-velocidade {
+    min-width: 3.8em;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.foco-controles .foco-play { min-width: 52px; font-size: 1.15rem; }
+
+/* Some enquanto a cifra rola; tocar na tela traz de volta */
+.foco-controles.foco-controles-oculto {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 24px);
+}
+
+/* Fim da música no culto: destaca o botão da próxima */
+.foco-controles .btn.destaque {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    color: #fff;
+    animation: pulsar-proxima 1.2s ease-in-out infinite;
+}
+
+@keyframes pulsar-proxima {
+    50% { box-shadow: 0 0 0 6px rgba(22, 101, 52, 0.25); }
+}
+
 .foco-controles .btn {
     min-width: 40px;
     height: 40px;
