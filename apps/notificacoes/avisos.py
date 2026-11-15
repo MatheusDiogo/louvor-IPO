@@ -98,6 +98,10 @@ def escala_publicada(inicio, fim, nome_mes):
     return servico.enviar_personalizado(mensagens, url='/escalas/', tag=f'escala-{inicio:%Y-%m}')
 
 
+# (Avisos com data marcada, como o prazo da disponibilidade, ficam na tela "Avisos programados":
+#  ver programados.py)
+
+
 # ---------------------------------------------------------------- 6. escala alterada depois de publicada
 
 def retrato_escalas(escala_ids):

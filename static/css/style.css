@@ -1349,3 +1349,19 @@ html[data-cifra-cores] .caixa-cifra .acorde-svg .acorde-solta { stroke: var(--ci
 .celula-escala .membro-indisponivel { text-decoration: line-through; text-decoration-color: #dc2626; }
 #celulaLista .linha-indisponivel { background: #fef2f2; }
 .lista-indisponiveis summary { cursor: pointer; }
+
+/* ---------------------------------------------------------------- Avisos programados (administrador) */
+.previa-notificacao {
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid var(--primary-green);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: #f8faf9;
+}
+
+.tabelas-sql {
+    max-height: 240px;
+    overflow-y: auto;
+    line-height: 1.6;
+}

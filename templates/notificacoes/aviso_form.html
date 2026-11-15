@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}{% if aviso.pk %}{{ aviso.nome }}{% else %}Novo aviso{% endif %} | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'avisos_lista' %}" class="text-success text-decoration-none">Avisos programados</a></li>
+            <li class="breadcrumb-item active text-truncate" style="max-width: 60vw;">{% if aviso.pk %}{{ aviso.nome }}{% else %}Novo aviso{% endif %}</li>
+        </ol>
+    </nav>
+    <h2 class="page-title mb-3">{% if aviso.pk %}Editar aviso{% else %}Novo aviso{% endif %}</h2>
+
+    {% if erros %}
+    <div class="alert alert-danger rounded-3 small">
+        {% for erro in erros %}<div><i class="bi bi-exclamation-circle me-1"></i>{{ erro }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="formAviso">
+        {% csrf_token %}
+
+        <!-- 1. Identificação -->
+        <div class="table-card p-3 p-md-4 mb-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-9">
+                    <label class="form-label small fw-bold text-secondary" for="campoNome">Nome (só para você identificar)</label>
+                    <input type="text" name="nome" id="campoNome" value="{{ aviso.nome }}" maxlength="100" required class="form-control" style="border-radius: 12px;">
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" role="switch" name="ativo" id="campoAtivo" {% if aviso.ativo or not aviso.pk %}checked{% endif %}>
+                        <label class="form-check-label small fw-semibold" for="campoAtivo">Ativo</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Quando -->
+        <div class="table-card p-3 p-md-4 mb-3">
+            <h6 class="fw-bold mb-2" style="color: var(--primary-green);"><i class="bi bi-clock me-2"></i>Quando enviar</h6>
+            <div class="d-flex flex-wrap gap-3 mb-2">
+                <label class="form-check"><input class="form-check-input" type="radio" name="agenda" value="cron" {% if aviso.agenda != 'prazo' %}checked{% endif %}> <span class="form-check-label">Cron (data e hora fixas)</span></label>
+                <label class="form-check"><input class="form-check-input" type="radio" name="agenda" value="prazo" {% if aviso.agenda == 'prazo' %}checked{% endif %}> <span class="form-check-label">Antes do prazo da disponibilidade</span></label>
+            </div>
+
+            <div id="blocoCron">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <input type="text" name="cron" id="campoCron" value="{{ aviso.cron }}" class="form-control font-monospace" placeholder="0 9 * * 1" style="border-radius: 12px;" autocapitalize="none" spellcheck="false">
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-select" id="presetCron" style="border-radius: 12px;" aria-label="Exemplos de cron">
+                            <option value="">Exemplos...</option>
+                            <option value="0 9 * * 1">Toda segunda às 9h</option>
+                            <option value="0 18 * * 5">Toda sexta às 18h</option>
+                            <option value="0 20 * * 6">Todo sábado às 20h</option>
+                            <option value="0 8 * * *">Todo dia às 8h</option>
+                            <option value="0 9 1 * *">Dia 1 de cada mês às 9h</option>
+                            <option value="0 9 * * 1-5">De segunda a sexta às 9h</option>
+                        </select>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-1"><code>minuto hora dia mês dia-da-semana</code> · dia da semana: 0 = domingo, 1 = segunda ... 6 = sábado · <code>*</code> = qualquer · <code>1-5</code>, <code>1,3</code>, <code>*/2</code> também valem. Horário de Recife.</small>
+            </div>
+
+            <div id="blocoPrazo" class="row g-2">
+                <div class="col-7 col-md-4">
+                    <label class="form-label small fw-bold text-secondary" for="campoDias">Dia</label>
+                    <select name="dias_antes_prazo" id="campoDias" class="form-select" style="border-radius: 12px;">
+                        <option value="0" {% if aviso.dias_antes_prazo == 0 %}selected{% endif %}>No dia do prazo (sexta)</option>
+                        <option value="1" {% if aviso.dias_antes_prazo == 1 %}selected{% endif %}>1 dia antes (quinta)</option>
+                        <option value="2" {% if aviso.dias_antes_prazo == 2 %}selected{% endif %}>2 dias antes (quarta)</option>
+                        <option value="3" {% if aviso.dias_antes_prazo == 3 %}selected{% endif %}>3 dias antes (terça)</option>
+                        <option value="4" {% if aviso.dias_antes_prazo == 4 %}selected{% endif %}>4 dias antes (segunda)</option>
+                        <option value="5" {% if aviso.dias_antes_prazo == 5 %}selected{% endif %}>5 dias antes (domingo)</option>
+                        <option value="6" {% if aviso.dias_antes_prazo == 6 %}selected{% endif %}>6 dias antes (sábado)</option>
+                    </select>
+                </div>
+                <div class="col-5 col-md-2">
+                    <label class="form-label small fw-bold text-secondary" for="campoHora">Hora</label>
+                    <select name="hora" id="campoHora" class="form-select" style="border-radius: 12px;">
+                        {% for h in horas %}<option value="{{ h }}" {% if aviso.hora == h %}selected{% endif %}>{{ h }}h</option>{% endfor %}
+                    </select>
+                </div>
+                <small class="text-muted d-block">Prazo = sexta-feira antes do último domingo do mês (para informar o mês seguinte).</small>
+            </div>
+
+            <div class="small mt-2" id="proximos"></div>
+        </div>
+
+        <!-- 3. Para quem -->
+        <div class="table-card p-3 p-md-4 mb-3">
+            <h6 class="fw-bold mb-1" style="color: var(--primary-green);"><i class="bi bi-people me-2"></i>Para quem (consulta SQL)</h6>
+            <p class="small text-muted mb-2">Só <strong>SELECT</strong>, numa transação somente leitura. A coluna <code>id</code> são os integrantes (só os ativos recebem). <strong>As outras colunas viram variáveis</strong> da mensagem: <code>SELECT u.id, i.nome AS instrumento</code> → <code>{instrumento}</code>.</p>
+            <select class="form-select form-select-sm mb-2" id="exemploSql" style="border-radius: 10px;" aria-label="Exemplos de consulta">
+                <option value="">Inserir um exemplo...</option>
+                {% for rotulo, sql in exemplos %}<option value="{{ sql }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+            <textarea name="consulta" id="campoConsulta" rows="6" class="form-control font-monospace small" spellcheck="false" autocapitalize="none" style="border-radius: 12px;">{{ aviso.consulta }}</textarea>
+            <details class="mt-2 small">
+                <summary class="text-success" style="cursor: pointer;">Tabelas e colunas</summary>
+                <div class="mt-2 tabelas-sql">
+                    {% for t in tabelas %}<div><code class="fw-bold">{{ t.tabela }}</code>: <span class="text-muted">{{ t.colunas|join:", " }}</span></div>{% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <!-- 4. Mensagem -->
+        <div class="table-card p-3 p-md-4 mb-3">
+            <h6 class="fw-bold mb-2" style="color: var(--primary-green);"><i class="bi bi-chat-text me-2"></i>Mensagem</h6>
+            <label class="form-label small fw-bold text-secondary" for="campoTitulo">Título</label>
+            <input type="text" name="titulo" id="campoTitulo" value="{{ aviso.titulo }}" maxlength="120" class="form-control mb-2 campo-texto" style="border-radius: 12px;">
+            <label class="form-label small fw-bold text-secondary" for="campoMensagem">Texto</label>
+            <textarea name="mensagem" id="campoMensagem" rows="3" class="form-control campo-texto" style="border-radius: 12px;">{{ aviso.mensagem }}</textarea>
+            <div class="small text-muted mt-2 mb-1">Toque para inserir uma variável:</div>
+            <div class="d-flex flex-wrap gap-1" id="variaveis">
+                {% for nome, descricao in variaveis %}<button type="button" class="btn btn-sm btn-light border rounded-pill variavel" data-variavel="{{ nome }}" title="{{ descricao }}">{{ "{" }}{{ nome }}{{ "}" }}</button>{% endfor %}
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-secondary" for="campoUrl">Ao tocar na notificação, abrir</label>
+                    <input type="text" name="url" id="campoUrl" value="{{ aviso.url }}" list="listaPaginas" class="form-control" style="border-radius: 12px;">
+                    <datalist id="listaPaginas">{% for url, rotulo in paginas %}<option value="{{ url }}">{{ rotulo }}</option>{% endfor %}</datalist>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Prévia -->
+        <div class="table-card p-3 p-md-4 mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h6 class="fw-bold mb-0 me-auto" style="color: var(--primary-green);"><i class="bi bi-eye me-2"></i>Prévia (nada é enviado)</h6>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" id="btnPrevia"><i class="bi bi-arrow-repeat me-1"></i>Atualizar prévia</button>
+            </div>
+            <div id="previa" class="small text-muted">Toque em "Atualizar prévia".</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <a href="{% url 'avisos_lista' %}" class="btn btn-light border rounded-pill px-4">Cancelar</a>
+            <button type="submit" class="btn-login btn-acao flex-grow-1 flex-md-grow-0"><i class="bi bi-check-lg me-2"></i>Salvar</button>
+            {% if aviso.pk %}
+            <button type="submit" form="formTeste" class="btn btn-outline-primary rounded-pill px-3"><i class="bi bi-send me-1"></i>Enviar teste para mim</button>
+            <button type="submit" form="formExcluir" class="btn btn-outline-danger rounded-pill px-3 ms-md-auto"><i class="bi bi-trash me-1"></i>Excluir</button>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if aviso.pk %}
+    <form method="post" action="{% url 'aviso_enviar_teste' aviso.pk %}" id="formTeste" class="d-none">{% csrf_token %}</form>
+    <form method="post" action="{% url 'aviso_excluir' aviso.pk %}" id="formExcluir" class="d-none"
+          onsubmit="return confirm('Excluir este aviso? O histórico de envios fica guardado.')">{% csrf_token %}</form>
+
+    <div class="table-card p-3 p-md-4">
+        <h6 class="fw-bold mb-2" style="color: var(--primary-green);"><i class="bi bi-clock-history me-2"></i>Envios deste aviso</h6>
+        {% for envio in historico %}
+        <div class="small py-1 {% if not forloop.last %}border-bottom{% endif %}">
+            {{ envio.enviado_em|date:"d/m/Y H:i" }} · {{ envio.pessoas }} pessoa{{ envio.pessoas|pluralize }} · {{ envio.celulares }} entregue{{ envio.celulares|pluralize }}
+            {% if envio.teste %}<span class="badge bg-info-subtle text-info-emphasis">teste</span>{% endif %}
+            {% if envio.erro %}<div class="text-danger">{{ envio.erro }}</div>{% endif %}
+        </div>
+        {% empty %}<p class="small text-muted mb-0">Ainda não foi enviado.</p>{% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const form = document.getElementById('formAviso');
+    const campo = nome => form.querySelector(`[name="${nome}"]`);
+    const agenda = () => form.querySelector('[name="agenda"]:checked').value;
+
+    // Cron ou prazo
+    const mostrarAgenda = () => {
+        document.getElementById('blocoCron').hidden = agenda() !== 'cron';
+        document.getElementById('blocoPrazo').hidden = agenda() !== 'prazo';
+    };
+    form.querySelectorAll('[name="agenda"]').forEach(r => r.addEventListener('change', () => { mostrarAgenda(); previa(); }));
+    mostrarAgenda();
+    document.getElementById('presetCron').addEventListener('change', e => {
+        if (e.target.value) { campo('cron').value = e.target.value; previa(); }
+        e.target.value = '';
+    });
+    document.getElementById('exemploSql').addEventListener('change', e => {
+        if (e.target.value) { campo('consulta').value = e.target.value; previa(); }
+        e.target.value = '';
+    });
+
+    // Variáveis: inserem no último campo de texto usado (título ou mensagem)
+    let ultimoCampo = campo('mensagem');
+    form.querySelectorAll('.campo-texto').forEach(c => c.addEventListener('focus', () => { ultimoCampo = c; }));
+    document.getElementById('variaveis').addEventListener('click', e => {
+        const botao = e.target.closest('[data-variavel]');
+        if (!botao) return;
+        const texto = `{${botao.dataset.variavel}}`;
+        const ini = ultimoCampo.selectionStart ?? ultimoCampo.value.length, fim = ultimoCampo.selectionEnd ?? ini;
+        ultimoCampo.value = ultimoCampo.value.slice(0, ini) + texto + ultimoCampo.value.slice(fim);
+        ultimoCampo.focus();
+        ultimoCampo.selectionStart = ultimoCampo.selectionEnd = ini + texto.length;
+        previa();
+    });
+
+    const criar = (tag, classe, texto) => { const e = document.createElement(tag); if (classe) e.className = classe; if (texto !== undefined) e.textContent = texto; return e; };
+
+    // Prévia: quem recebe, variáveis da consulta, como fica a mensagem e próximos envios
+    let espera;
+    function previa() {
+        clearTimeout(espera);
+        espera = setTimeout(async () => {
+            const alvo = document.getElementById('previa');
+            const proximos = document.getElementById('proximos');
+            const corpo = {
+                agenda: agenda(), cron: campo('cron').value, dias_antes_prazo: campo('dias_antes_prazo').value,
+                hora: campo('hora').value, consulta: campo('consulta').value,
+                titulo: campo('titulo').value, mensagem: campo('mensagem').value,
+            };
+            let d;
+            try {
+                const r = await fetch("{% url 'aviso_testar' %}", { method: 'POST', headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+                d = await r.json();
+            } catch (e) { alvo.textContent = 'Não foi possível montar a prévia.'; return; }
+
+            proximos.replaceChildren();
+            if (d.erro_cron) proximos.append(criar('span', 'text-danger', d.erro_cron));
+            else if (d.proximos && d.proximos.length) proximos.append(criar('span', 'text-muted', 'Próximos envios: '), criar('strong', '', d.proximos.join(' · ')));
+            else proximos.append(criar('span', 'text-muted', 'Nenhum envio previsto no próximo ano.'));
+
+            alvo.replaceChildren();
+            alvo.className = 'small';
+            if (d.erro_consulta) { alvo.append(criar('div', 'text-danger', d.erro_consulta)); return; }
+            alvo.append(criar('div', 'mb-2', `${d.total} integrante${d.total === 1 ? '' : 's'} ativo${d.total === 1 ? '' : 's'} receberia${d.total === 1 ? '' : 'm'} este aviso.`));
+
+            // variáveis vindas das colunas da consulta
+            document.querySelectorAll('.variavel-extra').forEach(b => b.remove());
+            (d.extras || []).forEach(nome => {
+                const b = criar('button', 'btn btn-sm btn-outline-success rounded-pill variavel variavel-extra', `{${nome}}`);
+                b.type = 'button'; b.dataset.variavel = nome; b.title = 'coluna da consulta';
+                document.getElementById('variaveis').append(b);
+            });
+
+            (d.linhas || []).slice(0, 5).forEach(l => {
+                const caixa = criar('div', 'previa-notificacao');
+                caixa.append(criar('div', 'text-muted', l.nome), criar('div', 'fw-bold', l.titulo), criar('div', '', l.mensagem));
+                alvo.append(caixa);
+            });
+            if (d.total > 5) alvo.append(criar('div', 'text-muted', `... e mais ${d.total - 5}.`));
+        }, 400);
+    }
+    ['cron', 'consulta', 'titulo', 'mensagem', 'dias_antes_prazo', 'hora'].forEach(n => campo(n).addEventListener('input', previa));
+    ['dias_antes_prazo', 'hora'].forEach(n => campo(n).addEventListener('change', previa));
+    document.getElementById('btnPrevia').addEventListener('click', previa);
+    previa();
+})();
+</script>
+{% endblock %}
