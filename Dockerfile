@@ -27,7 +27,11 @@ RUN chmod -R 777 /app/data /app/staticfiles /app/static /app/media
 
 # Comando para coletar estáticos, migrar e iniciar o servidor
 # Usamos um script ou o comando direto. O comando abaixo é otimizado para produção.
+# migrar_para_postgres: copia uma vez os dados do SQLite antigo para o Postgres (depois não faz nada).
+# Se a cópia falhar, o servidor não sobe (para não começar com o banco vazio).
+# O serviço "cron" (de hora em hora) usa outro comando de início: python manage.py enviar_avisos
 CMD ["sh", "-c", "python manage.py collectstatic --noinput && \
     python manage.py migrate && \
-    python manage.py createsuperuser --noinput || true && \
+    python manage.py migrar_para_postgres && \
+    (python manage.py createsuperuser --noinput || true) && \
     gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --log-level debug"]

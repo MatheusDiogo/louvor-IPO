@@ -114,6 +114,18 @@ DATABASES = {
     }
 }
 
+# No Railway o banco é um Postgres (variável DATABASE_URL, criada pelo próprio Railway).
+# Sem ela (no seu computador), continua o SQLite acima.
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, conn_health_checks=True)}
+    # O SQLite antigo (no volume) só é usado uma vez, para copiar os dados para o Postgres
+    # (comando migrar_para_postgres, rodado no início de cada deploy; não faz nada depois da cópia).
+    if os.path.exists(DATABASE_PATH):
+        DATABASES['sqlite_antigo'] = {'ENGINE': 'django.db.backends.sqlite3', 'NAME': str(DATABASE_PATH)}
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
