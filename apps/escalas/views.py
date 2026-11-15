@@ -59,6 +59,7 @@ def escala_list(request):
     for escala in escalas:
         escala.minhas_funcoes = minhas.get(escala.id, [])
         escala.eu_ministro = escala.ministrante_id == request.user.id
+        escala.eu_responsavel = escala.responsavel_id == request.user.id
 
     gerar = None
     if request.user.is_lider:
@@ -169,6 +170,21 @@ def escala_excluir(request, pk):
 MESES_HISTORICO = 4  # janela usada para "tocada X vezes nos últimos meses"
 
 
+def _preparar_tons(itens):
+    """Opções do seletor de tom de cada música (o tom atual sempre aparece na lista)."""
+    for item in itens:
+        opcoes = opcoes_de_tom(item.musica.tom)
+        item.opcoes_tom = opcoes if not item.tom or item.tom in opcoes else [item.tom] + opcoes
+
+
+def pode_mudar_tom(usuario, escala):
+    """Líder (em qualquer culto) ou o responsável musical do culto (só até o dia do culto)."""
+    if usuario.is_lider:
+        return True
+    return (escala.responsavel_id is not None and escala.responsavel_id == usuario.id
+            and escala.data >= timezone.localdate())
+
+
 def _tom_valido(valor, musica):
     """Tom escolhido para o culto; se vazio/inválido, usa o tom original da música."""
     return normalizar_tom(valor) if tom_base(valor) else musica.tom
@@ -180,9 +196,7 @@ def escala_detalhe(request, pk):
     """Gerenciar as músicas do culto (e o tom de cada uma)."""
     escala = get_object_or_404(Escala, pk=pk)
     itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
-    for item in itens:
-        opcoes = opcoes_de_tom(item.musica.tom)
-        item.opcoes_tom = opcoes if not item.tom or item.tom in opcoes else [item.tom] + opcoes
+    _preparar_tons(itens)
 
     na_escala = {item.musica_id for item in itens}
     musicas_disponiveis = sorted(Musica.objects.exclude(id__in=na_escala), key=lambda m: chave_alfabetica(m.nome))
@@ -233,17 +247,22 @@ def escala_musica_adicionar(request, pk):
 
 
 @login_required
-@requer_lider
 @require_POST
 def escala_musica_tom(request, item_pk):
-    """Troca o tom de uma música no culto."""
+    """Troca o tom de uma música no culto (líder ou responsável musical do culto)."""
     item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
+    if not pode_mudar_tom(request.user, item.escala):
+        messages.error(request, 'Só o responsável musical do culto (ou um líder) pode mudar os tons.')
+        return redirect('escala_visualizar', pk=item.escala_id)
     tom_antigo = item.tom
     item.tom = _tom_valido(request.POST.get('tom', ''), item.musica)
     item.save(update_fields=['tom'])
-    avisos.tom_alterado(item.escala, item, tom_antigo)
+    avisos.tom_alterado(item.escala, item, tom_antigo, autor=request.user)
     messages.success(request, f'"{item.musica.nome}" agora em {item.tom or "tom original"}.')
-    return redirect('escala_detalhe', pk=item.escala_id)
+    proximo = request.POST.get('next', '')
+    if url_has_allowed_host_and_scheme(proximo, allowed_hosts={request.get_host()}):
+        return redirect(proximo)
+    return redirect('escala_detalhe' if request.user.is_lider else 'escala_visualizar', pk=item.escala_id)
 
 
 @login_required
@@ -304,7 +323,11 @@ def _equipe(escala):
 def escala_visualizar(request, pk):
     """Visualização do culto (somente leitura): equipe e músicas."""
     escala = get_object_or_404(Escala, pk=pk)
-    itens = escala.itens.select_related('musica').order_by('ordem', 'id')
+    itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
+    # O responsável musical troca os tons aqui mesmo (o líder usa "Editar músicas")
+    mudar_tom = not request.user.is_lider and pode_mudar_tom(request.user, escala)
+    if mudar_tom:
+        _preparar_tons(itens)
     equipe = _equipe(escala)
     minhas_funcoes = [inst.nome for inst, usuarios in equipe.items() if request.user in usuarios]
 
@@ -314,6 +337,7 @@ def escala_visualizar(request, pk):
         'equipe': list(equipe.items()),
         'minhas_funcoes': minhas_funcoes,
         'pode_ordenar': pode_ordenar(request.user, escala),
+        'mudar_tom': mudar_tom,
     })
 
 

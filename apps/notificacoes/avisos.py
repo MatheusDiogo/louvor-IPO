@@ -55,12 +55,13 @@ def repertorio_removido(escala, nome_musica, total_antes):
         f'Música removida: {nome_musica}', url=_url_cifras(escala), tag=f'culto-{escala.pk}-musicas')
 
 
-def tom_alterado(escala, item, tom_antigo):
-    """Troca de tom: avisa só quem toca instrumento (o vocal não precisa)."""
+def tom_alterado(escala, item, tom_antigo, autor=None):
+    """Troca de tom: avisa só quem toca instrumento (o vocal não precisa). Quem trocou não é avisado."""
     if not _culto_futuro(escala) or escala.itens.count() < MUSICAS_PARA_AVISAR or item.tom == tom_antigo:
         return 0
+    autor_id = getattr(autor, 'pk', autor)
     return servico.enviar(
-        _equipe(escala, sem_vocal=True), f'Tom alterado no culto de {escala.data:%d/%m}',
+        [u for u in _equipe(escala, sem_vocal=True) if u.pk != autor_id], f'Tom alterado no culto de {escala.data:%d/%m}',
         f'{item.musica.nome}: agora em {item.tom or "tom original"}' + (f' (antes {tom_antigo})' if tom_antigo else ''),
         url=_url_cifras(escala), tag=f'culto-{escala.pk}-tom-{item.pk}')
 
@@ -105,11 +106,11 @@ def escala_publicada(inicio, fim, nome_mes):
 # ---------------------------------------------------------------- 6. escala alterada depois de publicada
 
 def retrato_escalas(escala_ids):
-    """Como estão os cultos agora: {id do culto: ({usuário: instrumento}, ministrante)}."""
+    """Como estão os cultos agora: {id do culto: ({usuário: instrumento}, ministrante, responsável musical)}."""
     from apps.escalas.models import Escala, EscalaIntegrante
 
-    retrato = {pk: ({}, ministrante) for pk, ministrante in
-               Escala.objects.filter(pk__in=escala_ids).values_list('pk', 'ministrante_id')}
+    retrato = {pk: ({}, ministrante, responsavel) for pk, ministrante, responsavel in
+               Escala.objects.filter(pk__in=escala_ids).values_list('pk', 'ministrante_id', 'responsavel_id')}
     for escala_id, usuario_id, instrumento_id in (EscalaIntegrante.objects.filter(escala_id__in=escala_ids)
                                                   .values_list('escala_id', 'usuario_id', 'instrumento_id')):
         retrato[escala_id][0][usuario_id] = instrumento_id
@@ -118,7 +119,7 @@ def retrato_escalas(escala_ids):
 
 def escala_alterada(escalas, antes, depois, autor=None):
     """Depois de salvar a escala: avisa só quem teve a sua escala mudada (entrou, saiu, trocou de
-    instrumento ou de ministração). Só para cultos futuros de meses já publicados — antes da
+    instrumento, de ministração ou de responsável musical). Só para cultos futuros de meses já publicados — antes da
     publicação, o aviso geral do "Publicar escala" já conta tudo. Quem salvou não é avisado."""
     from apps.escalas.models import PublicacaoEscala
     from apps.instrumentos.models import Instrumento
@@ -130,8 +131,8 @@ def escala_alterada(escalas, antes, depois, autor=None):
     for escala in sorted(escalas, key=lambda e: e.data):
         if not _culto_futuro(escala) or escala.data.replace(day=1) not in publicados:
             continue
-        equipe_antes, ministrante_antes = antes.get(escala.pk, ({}, None))
-        equipe_depois, ministrante_depois = depois.get(escala.pk, ({}, None))
+        equipe_antes, ministrante_antes, responsavel_antes = antes.get(escala.pk, ({}, None, None))
+        equipe_depois, ministrante_depois, responsavel_depois = depois.get(escala.pk, ({}, None, None))
         mudancas = {}
         for uid in set(equipe_antes) | set(equipe_depois):
             de, para = equipe_antes.get(uid), equipe_depois.get(uid)
@@ -146,6 +147,11 @@ def escala_alterada(escalas, antes, depois, autor=None):
                 mudancas.setdefault(ministrante_depois, []).append('vai ministrar')
             if ministrante_antes and ministrante_antes in equipe_depois:
                 mudancas.setdefault(ministrante_antes, []).append('não vai mais ministrar')
+        if responsavel_depois != responsavel_antes:
+            if responsavel_depois:
+                mudancas.setdefault(responsavel_depois, []).append('é o responsável musical (pode mudar os tons)')
+            if responsavel_antes and responsavel_antes in equipe_depois:
+                mudancas.setdefault(responsavel_antes, []).append('não é mais o responsável musical')
         for uid, partes in mudancas.items():
             frases.setdefault(uid, []).append(f'Culto de {escala.data:%d/%m}: você ' + ' e '.join(partes))
 

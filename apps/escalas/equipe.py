@@ -78,6 +78,7 @@ def _montar_linhas(escalas, instrumentos, nomes):
                     'id': uid,
                     'nome': nomes.get(uid, '?'),
                     'ministrante': uid == escala.ministrante_id,
+                    'responsavel': uid == escala.responsavel_id,
                 }
                 for uid in por_instrumento.get(inst.id, [])
             ]
@@ -165,6 +166,7 @@ def escala_equipe(request):
             for l in linhas for c in l['celulas']
         },
         'ministrante': {e.id: e.ministrante_id for e in escalas},
+        'responsavel': {e.id: e.responsavel_id for e in escalas},
         # quem já está em algum instrumento em cada culto: {culto: {pessoa: [instrumento, nome do instrumento]}}
         'ocupados': {
             e.id: {ei.usuario_id: [ei.instrumento_id, nomes_instrumentos.get(ei.instrumento_id, '')]
@@ -224,8 +226,9 @@ class ErroEscala(Exception):
     pass
 
 
-def _validar_culto(escala, celulas, ministrante, instrumentos, nomes):
-    """Confere as células enviadas para um culto. Devolve {instrumento: [usuários]} e o ministrante."""
+def _validar_culto(escala, celulas, ministrante, responsavel, instrumentos, nomes):
+    """Confere as células enviadas para um culto. Devolve {instrumento: [usuários]}, o ministrante e o
+    responsável musical."""
     resultado = {}
     vistos = {}  # usuário -> instrumento (uma pessoa por instrumento por culto)
     atuais = defaultdict(set)
@@ -265,7 +268,10 @@ def _validar_culto(escala, celulas, ministrante, instrumentos, nomes):
     ministrante = int(ministrante) if str(ministrante or '').isdigit() else None
     if ministrante not in vistos:
         ministrante = None  # ministrante precisa estar escalado no culto
-    return resultado, ministrante
+    responsavel = int(responsavel) if str(responsavel or '').isdigit() else None
+    if responsavel not in vistos:
+        responsavel = None  # o responsável musical também precisa estar escalado
+    return resultado, ministrante, responsavel
 
 
 @login_required
@@ -274,7 +280,8 @@ def _validar_culto(escala, celulas, ministrante, instrumentos, nomes):
 def escala_equipe_salvar(request):
     """Salva de uma vez todas as alterações feitas na tela de Escalas (um único envio).
 
-    Corpo (JSON): {"cultos": {"<id do culto>": {"celulas": {"<id do instrumento>": [ids]}, "ministrante": id|null}}}
+    Corpo (JSON): {"cultos": {"<id do culto>": {"celulas": {"<id do instrumento>": [ids]}, "ministrante": id|null,
+                                               "responsavel": id|null}}}
     Se algo for inválido, nada é gravado.
     """
     try:
@@ -299,16 +306,16 @@ def escala_equipe_salvar(request):
             escala = escalas.get(int(escala_id)) if str(escala_id).isdigit() else None
             if escala is None:
                 raise ErroEscala('Um dos cultos não existe mais. Recarregue a página.')
-            celulas, ministrante = _validar_culto(escala, culto.get('celulas'), culto.get('ministrante'),
-                                                  instrumentos, nomes)
-            planos.append((escala, celulas, ministrante))
+            celulas, ministrante, responsavel = _validar_culto(
+                escala, culto.get('celulas'), culto.get('ministrante'), culto.get('responsavel'), instrumentos, nomes)
+            planos.append((escala, celulas, ministrante, responsavel))
     except ErroEscala as erro:
         return JsonResponse({'ok': False, 'erro': str(erro)}, status=400)
 
-    ids = [escala.pk for escala, _, _ in planos]
+    ids = [plano[0].pk for plano in planos]
     retrato_antes = avisos.retrato_escalas(ids)
     with transaction.atomic():
-        for escala, celulas, ministrante in planos:
+        for escala, celulas, ministrante, responsavel in planos:
             for inst_id, usuarios in celulas.items():
                 atuais = EscalaIntegrante.objects.filter(escala=escala, instrumento_id=inst_id)
                 antes = set(atuais.values_list('usuario_id', flat=True))
@@ -316,12 +323,13 @@ def escala_equipe_salvar(request):
                 for uid in usuarios:  # mantém quem já estava (e a ordem); novos entram no fim
                     if uid not in antes:
                         EscalaIntegrante.objects.create(escala=escala, instrumento_id=inst_id, usuario_id=uid)
-            if escala.ministrante_id != ministrante:
+            if escala.ministrante_id != ministrante or escala.responsavel_id != responsavel:
                 escala.ministrante_id = ministrante
-                escala.save(update_fields=['ministrante'])
+                escala.responsavel_id = responsavel
+                escala.save(update_fields=['ministrante', 'responsavel'])
 
     # Mês já publicado: quem teve a escala mudada recebe uma notificação
-    avisados = avisos.escala_alterada([e for e, _, _ in planos], retrato_antes, avisos.retrato_escalas(ids),
+    avisados = avisos.escala_alterada([plano[0] for plano in planos], retrato_antes, avisos.retrato_escalas(ids),
                                       autor=request.user)
 
     total = len(planos)
@@ -374,11 +382,14 @@ def escala_equipe_exportar(request):
     nomes = _nomes_curtos(list(Usuario.objects.all()))
     linhas = _montar_linhas(escalas, instrumentos, nomes)
 
+    # * ministrante, ** responsável musical (a mesma pessoa nos dois: ***)
     for linha in linhas:
         for celula in linha['celulas']:
             celula['texto'] = _juntar_nomes([
-                m['nome'] + ('*' if m['ministrante'] else '') for m in celula['membros']
+                m['nome'] + ('*' if m['ministrante'] else '') + ('**' if m['responsavel'] else '')
+                for m in celula['membros']
             ]) or '-'
+    tem_responsavel = any(e.responsavel_id for e in escalas)
 
     meses = []
     for linha in linhas:
@@ -392,4 +403,5 @@ def escala_equipe_exportar(request):
         'fim': fim,
         'instrumentos': instrumentos,
         'meses': meses,
+        'tem_responsavel': tem_responsavel,
     })

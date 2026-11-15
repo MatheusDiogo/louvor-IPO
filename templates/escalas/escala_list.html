@@ -57,7 +57,7 @@
                         </span>
                         {% if escala.minhas_funcoes %}
                         <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle mt-1 text-wrap text-start">
-                            <i class="bi bi-person-check-fill me-1"></i>Você está escalado: {{ escala.minhas_funcoes|join:", " }}{% if escala.eu_ministro %} · <i class="bi bi-star-fill text-warning"></i> Ministrante{% endif %}
+                            <i class="bi bi-person-check-fill me-1"></i>Você está escalado: {{ escala.minhas_funcoes|join:", " }}{% if escala.eu_ministro %} · <i class="bi bi-star-fill text-warning"></i> Ministrante{% endif %}{% if escala.eu_responsavel %} · <i class="bi bi-sliders text-primary"></i> Responsável musical{% endif %}
                         </span>
                         {% endif %}
                         {% if escala.observacao %}

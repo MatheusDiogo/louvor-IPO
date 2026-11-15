@@ -32,7 +32,7 @@
     {% if minhas_funcoes %}
     <div class="alert alert-success rounded-3 d-flex align-items-center gap-2 py-2">
         <i class="bi bi-person-check-fill fs-5"></i>
-        <span>Você está escalado neste culto: <strong>{{ minhas_funcoes|join:", " }}</strong>{% if escala.ministrante_id == user.id %} · <i class="bi bi-star-fill text-warning"></i> <strong>Ministrante</strong>{% endif %}</span>
+        <span>Você está escalado neste culto: <strong>{{ minhas_funcoes|join:", " }}</strong>{% if escala.ministrante_id == user.id %} · <i class="bi bi-star-fill text-warning"></i> <strong>Ministrante</strong>{% endif %}{% if escala.responsavel_id == user.id %} · <i class="bi bi-sliders text-primary"></i> <strong>Responsável musical</strong>{% endif %}</span>
     </div>
     {% endif %}
 
@@ -44,7 +44,7 @@
             <div class="col-sm-6 col-lg-4 d-flex gap-2 small">
                 <span class="text-secondary fw-semibold flex-shrink-0" style="width: 100px;">{{ instrumento.nome }}</span>
                 <span>
-                    {% for u in usuarios %}<span class="{% if u == user %}fw-bold text-success{% endif %}">{{ u.first_name|default:u.username }}{% if u.id == escala.ministrante_id %} <i class="bi bi-star-fill text-warning" title="Ministrante"></i>{% endif %}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% for u in usuarios %}<span class="{% if u == user %}fw-bold text-success{% endif %}">{{ u.first_name|default:u.username }}{% if u.id == escala.ministrante_id %} <i class="bi bi-star-fill text-warning" title="Ministrante"></i>{% endif %}{% if u.id == escala.responsavel_id %} <i class="bi bi-sliders text-primary" title="Responsável musical"></i>{% endif %}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
                 </span>
             </div>
             {% endfor %}
@@ -68,6 +68,9 @@
         </a>
         {% endif %}
     </div>
+    {% if mudar_tom and itens %}
+    <p class="small text-muted mb-3"><i class="bi bi-sliders text-primary me-1"></i>Você é o responsável musical deste culto: troque o tom pelo seletor de cada música. A cifra muda para todos, e quem toca instrumento recebe um aviso.</p>
+    {% endif %}
     <div class="row g-3 g-md-4">
         {% for item in itens %}
         <div class="col-sm-6 col-lg-4">
@@ -76,10 +79,21 @@
                     <div class="text-break-word" style="min-width: 0;">
                         <span class="text-muted small">#{{ forloop.counter }}</span>
                         <h5 class="fw-bold mb-0 mt-1">{{ item.musica.nome }}</h5>
+                        {% if mudar_tom and item.musica.tom and item.tom != item.musica.tom %}<span class="small text-muted">Original em {{ item.musica.tom }}</span>{% endif %}
                     </div>
+                    {% if mudar_tom %}
+                    <form method="post" action="{% url 'escala_musica_tom' item.pk %}" class="m-0 flex-shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <select name="tom" class="form-select form-select-sm seletor-tom" onchange="this.form.submit()" aria-label="Tom de {{ item.musica.nome }}">
+                            {% for opcao in item.opcoes_tom %}<option value="{{ opcao }}" {% if opcao == item.tom %}selected{% endif %}>{{ opcao }}</option>{% endfor %}
+                        </select>
+                    </form>
+                    {% else %}
                     <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 flex-shrink-0 fs-6">
                         {{ item.tom|default:"—" }}
                     </span>
+                    {% endif %}
                 </div>
 
                 <div class="mt-auto d-flex gap-2">

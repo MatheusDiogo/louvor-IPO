@@ -136,7 +136,7 @@
                             {% if pode_editar %}<button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">{% else %}<div class="celula-escala celula-leitura">{% endif %}
                                 <span class="membros-celula" data-vazio="—">
                                     {% for m in celula.membros %}
-                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}{% if m.responsavel %} <i class="bi bi-sliders text-primary"></i>{% endif %}</span>
                                     {% empty %}
                                     <span class="text-muted opacity-50">—</span>
                                     {% endfor %}
@@ -173,7 +173,7 @@
                 <span class="text-secondary small fw-semibold instrumento-label">{{ celula.instrumento.nome }}</span>
                 <span class="flex-grow-1 text-end membros-celula" data-vazio="Toque para escalar">
                     {% for m in celula.membros %}
-                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}{% if m.responsavel %} <i class="bi bi-sliders text-primary"></i>{% endif %}</span>
                     {% empty %}
                     <span class="text-muted opacity-50">{% if pode_editar %}Toque para escalar{% else %}—{% endif %}</span>
                     {% endfor %}
@@ -229,7 +229,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body px-4 pt-0">
-                <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante do culto.</p>
+                <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante e em <i class="bi bi-sliders"></i> para o responsável musical (pode mudar os tons).</p>
                 <div class="list-group" id="celulaLista"></div>
             </div>
             <div class="modal-footer border-0 pb-4 px-4">
@@ -255,7 +255,7 @@
     const chave = (e, i) => `${e}-${i}`;
 
     // Estado na tela (só vai para o banco ao tocar em Salvar)
-    const original = JSON.parse(JSON.stringify({ celulas: dados.celulas, ministrante: dados.ministrante }));
+    const original = JSON.parse(JSON.stringify({ celulas: dados.celulas, ministrante: dados.ministrante, responsavel: dados.responsavel }));
     const estado = JSON.parse(JSON.stringify(original));
     let celulaAberta = null;
 
@@ -279,7 +279,8 @@
     function cultosAlterados() {
         return escalas.filter(e => {
             const mudouMinistrante = String(estado.ministrante[e] || '') !== String(original.ministrante[e] || '');
-            return mudouMinistrante || instrumentosIds.some(i =>
+            const mudouResponsavel = String(estado.responsavel[e] || '') !== String(original.responsavel[e] || '');
+            return mudouMinistrante || mudouResponsavel || instrumentosIds.some(i =>
                 JSON.stringify(membrosDe(e, i)) !== JSON.stringify((original.celulas[chave(e, i)] || []).map(Number)));
         });
     }
@@ -307,6 +308,9 @@
                 span.textContent = dados.nomes[uid] || '?';
                 if (String(estado.ministrante[e] || '') === String(uid)) {
                     span.insertAdjacentHTML('beforeend', ' <i class="bi bi-star-fill text-warning"></i>');
+                }
+                if (String(estado.responsavel[e] || '') === String(uid)) {
+                    span.insertAdjacentHTML('beforeend', ' <i class="bi bi-sliders text-primary"></i>');
                 }
                 alvo.append(span);
             });
@@ -346,6 +350,7 @@
         const inst = dados.instrumentos[instId];
         const selecionados = membrosDe(e, instId).map(String);
         const ministrante = String(estado.ministrante[e] || '');
+        const responsavel = String(estado.responsavel[e] || '');
         const lista = document.getElementById('celulaLista');
         const ocup = ocupados(e);
         const total = contagem();
@@ -426,16 +431,31 @@
             estrelaLabel.title = 'Ministrante';
             estrelaLabel.innerHTML = '<i class="bi bi-star-fill"></i>';
 
+            const tons = document.createElement('input');
+            tons.type = 'checkbox'; tons.value = id;
+            tons.className = 'btn-check marcar-responsavel';
+            tons.id = 'resp_' + id;
+            tons.checked = marcado && responsavel === id;
+            tons.disabled = !marcado;
+            const tonsLabel = document.createElement('label');
+            tonsLabel.className = 'btn btn-sm btn-outline-primary rounded-pill flex-shrink-0';
+            tonsLabel.htmlFor = tons.id;
+            tonsLabel.title = 'Responsável musical (pode mudar os tons)';
+            tonsLabel.innerHTML = '<i class="bi bi-sliders"></i>';
+
             estrela.addEventListener('change', () => {
                 if (estrela.checked) lista.querySelectorAll('.marcar-ministrante').forEach(o => { if (o !== estrela) o.checked = false; });
             });
+            tons.addEventListener('change', () => {
+                if (tons.checked) lista.querySelectorAll('.marcar-responsavel').forEach(o => { if (o !== tons) o.checked = false; });
+            });
             cb.addEventListener('change', () => {
-                estrela.disabled = !cb.checked;
-                if (!cb.checked) estrela.checked = false;
+                estrela.disabled = tons.disabled = !cb.checked;
+                if (!cb.checked) estrela.checked = tons.checked = false;
             });
 
             rotulo.append(cb, nome);
-            linha.append(rotulo, estrela, estrelaLabel);
+            linha.append(rotulo, estrela, estrelaLabel, tons, tonsLabel);
             lista.append(linha);
         });
 
@@ -461,6 +481,14 @@
         }
         if (estado.ministrante[e] && ocupados(e)[estado.ministrante[e]] === undefined) estado.ministrante[e] = null;
 
+        const marcaTons = lista.querySelector('.marcar-responsavel:checked');
+        if (marcaTons) {
+            estado.responsavel[e] = Number(marcaTons.value);
+        } else if (antes.includes(Number(estado.responsavel[e]))) {
+            estado.responsavel[e] = null;  // o responsável estava nesta célula e foi desmarcado
+        }
+        if (estado.responsavel[e] && ocupados(e)[estado.responsavel[e]] === undefined) estado.responsavel[e] = null;
+
         bootstrap.Modal.getInstance(document.getElementById('modalCelula')).hide();
         desenhar();
     });
@@ -473,7 +501,7 @@
         alterados.forEach(e => {
             const celulas = {};
             instrumentosIds.forEach(i => { celulas[i] = membrosDe(e, i); });
-            cultos[e] = { celulas, ministrante: estado.ministrante[e] || null };
+            cultos[e] = { celulas, ministrante: estado.ministrante[e] || null, responsavel: estado.responsavel[e] || null };
         });
         const botao = document.getElementById('btnSalvar');
         botao.disabled = true;
@@ -499,6 +527,7 @@
         if (!confirm('Descartar as alterações não salvas?')) return;
         estado.celulas = JSON.parse(JSON.stringify(original.celulas));
         estado.ministrante = JSON.parse(JSON.stringify(original.ministrante));
+        estado.responsavel = JSON.parse(JSON.stringify(original.responsavel));
         desenhar();
     });
 

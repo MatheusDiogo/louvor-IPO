@@ -18,6 +18,15 @@ class Escala(models.Model):
         related_name="cultos_ministrados"
     )
 
+    # Responsável musical do culto (marcado na escala): pode mudar os tons das músicas deste culto
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cultos_responsavel"
+    )
+
     def __str__(self):
         return f"Escala de {self.data}"
 
