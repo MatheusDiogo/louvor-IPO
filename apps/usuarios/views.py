@@ -75,10 +75,13 @@ def cadastro_view(request):
 def integrantes_view(request):
     todos = Usuario.objects.all().order_by('first_name').prefetch_related('instrumentos')
     instrumentos = Instrumento.objects.all().order_by('nome')  # Para preencher o modal
+    aprovados = [u for u in todos if u.aprovado]
 
     return render(request, 'integrantes.html', {
-        'integrantes': [u for u in todos if u.is_active],
-        'pendentes': [u for u in todos if not u.is_active],
+        # ativos primeiro; os desativados vão para o fim
+        'integrantes': sorted(aprovados, key=lambda u: not u.is_active),
+        'inativos': sum(1 for u in aprovados if not u.is_active),
+        'pendentes': [u for u in todos if not u.aprovado],
         'instrumentos': instrumentos
     })
 
@@ -87,9 +90,10 @@ def integrantes_view(request):
 @requer_lider
 @require_POST
 def aprovar_integrante(request, id):
-    integrante = get_object_or_404(Usuario, id=id, is_active=False)
+    integrante = get_object_or_404(Usuario, id=id, aprovado=False)
     integrante.is_active = True
-    integrante.save(update_fields=['is_active'])
+    integrante.aprovado = True
+    integrante.save(update_fields=['is_active', 'aprovado'])
     messages.success(request, f'Cadastro de {integrante.get_full_name()} aprovado.')
 
     _enviar_email(
@@ -106,7 +110,7 @@ def aprovar_integrante(request, id):
 @requer_lider
 @require_POST
 def recusar_integrante(request, id):
-    integrante = get_object_or_404(Usuario, id=id, is_active=False)
+    integrante = get_object_or_404(Usuario, id=id, aprovado=False)
     nome = integrante.get_full_name()
     integrante.delete()
     messages.success(request, f'Cadastro de {nome} recusado.')
@@ -165,11 +169,15 @@ def salvar_integrante(request):
 @login_required
 @requer_lider
 @require_POST
-def excluir_integrante(request, id):
-    integrante = get_object_or_404(Usuario, id=id)
+def alternar_ativo(request, id):
+    """Ativa/desativa um integrante. Desativado: não entra no site, não aparece para escalar e não
+    recebe avisos, mas o histórico (escalas antigas etc.) é mantido. Não há mais exclusão."""
+    integrante = get_object_or_404(Usuario, id=id, aprovado=True)
     if integrante == request.user:
-        messages.error(request, 'Você não pode excluir a sua própria conta.')
+        messages.error(request, 'Você não pode desativar a sua própria conta.')
     else:
-        integrante.delete()
-        messages.success(request, 'Integrante excluído.')
+        integrante.is_active = not integrante.is_active
+        integrante.save(update_fields=['is_active'])
+        nome = integrante.get_full_name() or integrante.username
+        messages.success(request, f'{nome} {"ativado(a)" if integrante.is_active else "desativado(a)"}.')
     return redirect('integrantes')

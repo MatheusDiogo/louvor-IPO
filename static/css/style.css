@@ -1365,3 +1365,6 @@ html[data-cifra-cores] .caixa-cifra .acorde-svg .acorde-solta { stroke: var(--ci
     overflow-y: auto;
     line-height: 1.6;
 }
+
+/* Integrantes desativados (tela de Integrantes) */
+.integrante-inativo { opacity: 0.6; background: #f8faf9; }

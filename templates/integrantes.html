@@ -50,10 +50,14 @@
     </div>
     {% endif %}
 
+    {% if inativos %}
+    <p class="small text-muted mb-2"><i class="bi bi-person-slash me-1"></i>{{ inativos }} integrante{{ inativos|pluralize }} desativado{{ inativos|pluralize }} (no fim da lista). Desativado não entra no site, não aparece para escalar e não recebe avisos.</p>
+    {% endif %}
+
     <div class="row g-3 g-md-4">
         {% for integrante in integrantes %}
         <div class="col-sm-6 col-lg-4">
-            <div class="table-card p-3 p-md-4 h-100 d-flex flex-column">
+            <div class="table-card p-3 p-md-4 h-100 d-flex flex-column {% if not integrante.is_active %}integrante-inativo{% endif %}">
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
                         <i class="bi bi-person fs-4 text-success"></i>
@@ -62,7 +66,9 @@
                         <h5 class="fw-bold mb-0">{{ integrante.get_full_name|default:integrante.username }}</h5>
                         <p class="text-muted small mb-0 text-truncate">{{ integrante.email }}</p>
                     </div>
-                    {% if integrante.is_lider %}
+                    {% if not integrante.is_active %}
+                    <span class="badge rounded-pill bg-secondary flex-shrink-0">Inativo</span>
+                    {% elif integrante.is_lider %}
                     <span class="badge rounded-pill bg-warning text-dark flex-shrink-0">Líder</span>
                     {% endif %}
                 </div>
@@ -75,7 +81,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="d-flex gap-2 mt-auto">
+                <div class="d-flex align-items-center gap-2 mt-auto">
                     <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1 rounded-pill"
                             data-id="{{ integrante.id }}"
                             data-nome="{{ integrante.first_name }}"
@@ -87,9 +93,17 @@
                         <i class="bi bi-pencil me-1"></i>Editar
                     </button>
                     {% if integrante != user %}
-                    <form method="post" action="{% url 'excluir_integrante' integrante.id %}" class="d-inline-flex m-0" onsubmit="return confirm('Excluir {{ integrante.get_full_name|default:integrante.username|escapejs }}?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" aria-label="Excluir integrante">
-                        <i class="bi bi-trash"></i>
-                    </button></form>
+                    <!-- Ativo / inativo (não existe mais exclusão: o histórico das escalas é mantido) -->
+                    <form method="post" action="{% url 'alternar_ativo' integrante.id %}" class="m-0 flex-shrink-0">
+                        {% csrf_token %}
+                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1">
+                            <input class="form-check-input m-0" type="checkbox" role="switch" id="ativo_{{ integrante.id }}"
+                                   {% if integrante.is_active %}checked{% endif %}
+                                   data-nome="{{ integrante.get_full_name|default:integrante.username }}"
+                                   onchange="alternarAtivo(this)">
+                            <label class="form-check-label small" for="ativo_{{ integrante.id }}">Ativo</label>
+                        </div>
+                    </form>
                     {% endif %}
                 </div>
             </div>
@@ -157,4 +171,17 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Ao desligar, pede confirmação; ao ligar, ativa direto
+function alternarAtivo(chave) {
+    if (!chave.checked && !confirm(`Desativar ${chave.dataset.nome}? A pessoa não vai mais entrar no site, aparecer para escalar nem receber avisos. Dá para ativar de novo depois.`)) {
+        chave.checked = true;
+        return;
+    }
+    chave.form.submit();
+}
+</script>
 {% endblock %}

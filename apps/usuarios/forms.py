@@ -32,8 +32,10 @@ class CadastroForm(forms.Form):
         email = self.cleaned_data['email'].strip().lower()
         existente = Usuario.objects.filter(email__iexact=email).first()
         if existente:
-            if not existente.is_active:
+            if not existente.aprovado:
                 raise forms.ValidationError('Este e-mail já tem um cadastro aguardando aprovação.')
+            if not existente.is_active:
+                raise forms.ValidationError('Este e-mail já está cadastrado, mas a conta está desativada. Fale com um líder.')
             raise forms.ValidationError('Este e-mail já está cadastrado. Use "Esqueci minha senha" se não lembrar a senha.')
         return email
 
@@ -67,6 +69,7 @@ class CadastroForm(forms.Form):
             first_name=dados['first_name'],
             last_name=dados['last_name'],
             is_active=False,  # pendente até um líder aprovar
+            aprovado=False,
         )
         usuario.instrumentos.set(dados['instrumentos'])
         return usuario

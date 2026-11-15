@@ -30,10 +30,11 @@ def login_view(request):
             login(request, user)
             return redirect(_destino_seguro(request, proximo))
 
-        # Senha correta, mas cadastro ainda não aprovado por um líder
-        pendente = get_user_model().objects.filter(email__iexact=email, is_active=False).first()
-        if pendente and pendente.check_password(password):
-            erro = "Seu cadastro ainda aguarda aprovação de um líder."
+        # Senha correta, mas cadastro ainda não aprovado por um líder (ou conta desativada)
+        inativo = get_user_model().objects.filter(email__iexact=email, is_active=False).first()
+        if inativo and inativo.check_password(password):
+            erro = ("Seu cadastro ainda aguarda aprovação de um líder." if not inativo.aprovado
+                    else "Sua conta está desativada. Fale com um líder do louvor.")
         else:
             erro = "E-mail ou senha incorretos"
 
@@ -69,7 +70,7 @@ def home(request):
         }
     pendentes = 0
     if request.user.is_lider:
-        pendentes = get_user_model().objects.filter(is_active=False).count()
+        pendentes = get_user_model().objects.filter(aprovado=False).count()
 
     from apps.escalas.views import urls_proximos_cultos
 
