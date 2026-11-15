@@ -1,10 +1,10 @@
-"""Avisos programados: quando enviar (cron ou prazo da disponibilidade), para quem (SELECT) e o texto.
+"""Avisos programados: quando enviar (cron), para quem (SELECT) e o texto.
 
 O serviço cron do Railway roda `python manage.py enviar_avisos` de hora em hora; a cada rodada,
 os avisos que estão na hora saem uma vez só (o histórico EnvioAviso guarda a chave do período).
 """
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
@@ -232,15 +232,7 @@ def mensagens_do_aviso(aviso, hoje=None):
 # ---------------------------------------------------------------- quando enviar
 
 def chave_do_periodo(aviso, momento):
-    """Identifica o "envio" do aviso neste momento, ou None se não é hora dele."""
-    if aviso.agenda == 'prazo':
-        from apps.escalas.disponibilidade import prazo_do_mes, proximo_mes_aberto
-        hoje = momento.date()
-        mes = proximo_mes_aberto(hoje)
-        dia = prazo_do_mes(mes) - timedelta(days=aviso.dias_antes_prazo)
-        if hoje == dia and momento.hour == aviso.hora:
-            return f'aviso-{aviso.pk}-prazo-{mes:%Y-%m}'
-        return None
+    """Identifica o "envio" do aviso neste momento (uma vez por hora), ou None se não é hora dele."""
     try:
         cron = ler_cron(aviso.cron)
     except ErroCron:
@@ -251,21 +243,10 @@ def chave_do_periodo(aviso, momento):
 
 
 def proximos_envios(aviso, quantidade=3):
-    agora = timezone.localtime()
-    if aviso.agenda == 'cron':
-        try:
-            return proximos_cron(aviso.cron, agora, quantidade)
-        except ErroCron:
-            return []
-    from apps.escalas.disponibilidade import prazo_do_mes, _somar_meses, proximo_mes_aberto
-    resultado, mes = [], proximo_mes_aberto(agora.date())
-    while len(resultado) < quantidade:
-        dia = prazo_do_mes(mes) - timedelta(days=aviso.dias_antes_prazo)
-        momento = timezone.make_aware(datetime(dia.year, dia.month, dia.day, aviso.hora))
-        if momento > agora:
-            resultado.append(momento)
-        mes = _somar_meses(mes, 1)
-    return resultado
+    try:
+        return proximos_cron(aviso.cron, timezone.localtime(), quantidade)
+    except ErroCron:
+        return []
 
 
 def enviar(aviso, chave, teste_para=None):

@@ -24,19 +24,15 @@ class InscricaoPush(models.Model):
 class AvisoProgramado(models.Model):
     """Notificação enviada automaticamente, cadastrada na tela "Avisos programados" (só o administrador).
 
-    Quando: uma expressão cron (minuto hora dia mês dia-da-semana) ou "X dias antes do prazo da
-    disponibilidade". Para quem: uma consulta SQL (só SELECT) cuja coluna `id` são os integrantes;
-    as outras colunas viram variáveis da mensagem ({instrumento}, {data_culto}...).
+    Quando: uma expressão cron (minuto hora dia mês dia-da-semana), no horário de Recife.
+    Para quem: uma consulta SQL (só SELECT) cuja coluna `id` são os integrantes; as outras colunas
+    viram variáveis da mensagem ({instrumento}, {data_culto}...). A consulta também pode servir de
+    condição: se não devolver ninguém naquela hora, nada é enviado.
     """
-
-    AGENDAS = [('cron', 'Cron (data e hora fixas)'), ('prazo', 'Antes do prazo da disponibilidade')]
 
     nome = models.CharField(max_length=100)
     ativo = models.BooleanField(default=True)
-    agenda = models.CharField(max_length=10, choices=AGENDAS, default='cron')
-    cron = models.CharField(max_length=100, blank=True, help_text='minuto hora dia mês dia-da-semana')
-    dias_antes_prazo = models.PositiveSmallIntegerField(default=0, help_text='0 = no próprio dia do prazo (sexta)')
-    hora = models.PositiveSmallIntegerField(default=9, help_text='Hora do envio (agenda "prazo")')
+    cron = models.CharField(max_length=100, help_text='minuto hora dia mês dia-da-semana')
     titulo = models.CharField(max_length=120)
     mensagem = models.TextField()
     url = models.CharField(max_length=200, default='/home/', help_text='Página aberta ao tocar na notificação')

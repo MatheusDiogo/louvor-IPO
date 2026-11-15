@@ -40,11 +40,6 @@
         <!-- 2. Quando -->
         <div class="table-card p-3 p-md-4 mb-3">
             <h6 class="fw-bold mb-2" style="color: var(--primary-green);"><i class="bi bi-clock me-2"></i>Quando enviar</h6>
-            <div class="d-flex flex-wrap gap-3 mb-2">
-                <label class="form-check"><input class="form-check-input" type="radio" name="agenda" value="cron" {% if aviso.agenda != 'prazo' %}checked{% endif %}> <span class="form-check-label">Cron (data e hora fixas)</span></label>
-                <label class="form-check"><input class="form-check-input" type="radio" name="agenda" value="prazo" {% if aviso.agenda == 'prazo' %}checked{% endif %}> <span class="form-check-label">Antes do prazo da disponibilidade</span></label>
-            </div>
-
             <div id="blocoCron">
                 <div class="row g-2">
                     <div class="col-md-6">
@@ -63,28 +58,7 @@
                     </div>
                 </div>
                 <small class="text-muted d-block mt-1"><code>minuto hora dia mês dia-da-semana</code> · dia da semana: 0 = domingo, 1 = segunda ... 6 = sábado · <code>*</code> = qualquer · <code>1-5</code>, <code>1,3</code>, <code>*/2</code> também valem. Horário de Recife.</small>
-            </div>
-
-            <div id="blocoPrazo" class="row g-2">
-                <div class="col-7 col-md-4">
-                    <label class="form-label small fw-bold text-secondary" for="campoDias">Dia</label>
-                    <select name="dias_antes_prazo" id="campoDias" class="form-select" style="border-radius: 12px;">
-                        <option value="0" {% if aviso.dias_antes_prazo == 0 %}selected{% endif %}>No dia do prazo (sexta)</option>
-                        <option value="1" {% if aviso.dias_antes_prazo == 1 %}selected{% endif %}>1 dia antes (quinta)</option>
-                        <option value="2" {% if aviso.dias_antes_prazo == 2 %}selected{% endif %}>2 dias antes (quarta)</option>
-                        <option value="3" {% if aviso.dias_antes_prazo == 3 %}selected{% endif %}>3 dias antes (terça)</option>
-                        <option value="4" {% if aviso.dias_antes_prazo == 4 %}selected{% endif %}>4 dias antes (segunda)</option>
-                        <option value="5" {% if aviso.dias_antes_prazo == 5 %}selected{% endif %}>5 dias antes (domingo)</option>
-                        <option value="6" {% if aviso.dias_antes_prazo == 6 %}selected{% endif %}>6 dias antes (sábado)</option>
-                    </select>
-                </div>
-                <div class="col-5 col-md-2">
-                    <label class="form-label small fw-bold text-secondary" for="campoHora">Hora</label>
-                    <select name="hora" id="campoHora" class="form-select" style="border-radius: 12px;">
-                        {% for h in horas %}<option value="{{ h }}" {% if aviso.hora == h %}selected{% endif %}>{{ h }}h</option>{% endfor %}
-                    </select>
-                </div>
-                <small class="text-muted d-block">Prazo = sexta-feira antes do último domingo do mês (para informar o mês seguinte).</small>
+                <small class="text-muted d-block mt-1"><i class="bi bi-lightbulb me-1"></i>Para datas que o cron não expressa (ex.: a segunda da semana do prazo da disponibilidade), agende o dia da semana no cron e coloque a condição da data na consulta: se ela não devolver ninguém, nada é enviado. Veja os exemplos da consulta.</small>
             </div>
 
             <div class="small mt-2" id="proximos"></div>
@@ -171,15 +145,6 @@
     const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const form = document.getElementById('formAviso');
     const campo = nome => form.querySelector(`[name="${nome}"]`);
-    const agenda = () => form.querySelector('[name="agenda"]:checked').value;
-
-    // Cron ou prazo
-    const mostrarAgenda = () => {
-        document.getElementById('blocoCron').hidden = agenda() !== 'cron';
-        document.getElementById('blocoPrazo').hidden = agenda() !== 'prazo';
-    };
-    form.querySelectorAll('[name="agenda"]').forEach(r => r.addEventListener('change', () => { mostrarAgenda(); previa(); }));
-    mostrarAgenda();
     document.getElementById('presetCron').addEventListener('change', e => {
         if (e.target.value) { campo('cron').value = e.target.value; previa(); }
         e.target.value = '';
@@ -213,8 +178,7 @@
             const alvo = document.getElementById('previa');
             const proximos = document.getElementById('proximos');
             const corpo = {
-                agenda: agenda(), cron: campo('cron').value, dias_antes_prazo: campo('dias_antes_prazo').value,
-                hora: campo('hora').value, consulta: campo('consulta').value,
+                cron: campo('cron').value, consulta: campo('consulta').value,
                 titulo: campo('titulo').value, mensagem: campo('mensagem').value,
             };
             let d;
@@ -249,8 +213,7 @@
             if (d.total > 5) alvo.append(criar('div', 'text-muted', `... e mais ${d.total - 5}.`));
         }, 400);
     }
-    ['cron', 'consulta', 'titulo', 'mensagem', 'dias_antes_prazo', 'hora'].forEach(n => campo(n).addEventListener('input', previa));
-    ['dias_antes_prazo', 'hora'].forEach(n => campo(n).addEventListener('change', previa));
+    ['cron', 'consulta', 'titulo', 'mensagem'].forEach(n => campo(n).addEventListener('input', previa));
     document.getElementById('btnPrevia').addEventListener('click', previa);
     previa();
 })();

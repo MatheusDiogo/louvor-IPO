@@ -29,6 +29,12 @@ VARIAVEIS_FIXAS = [
     ('mes_seguinte', 'mês aberto para informar a disponibilidade'),
     ('prazo', 'prazo desse mês (dd/mm)'),
 ]
+# Data de hoje em Recife (o banco trabalha em UTC: depois das 21h de Recife já seria "amanhã")
+HOJE_SQL = "(now() AT TIME ZONE 'America/Recife')::date"
+# Último domingo do mês atual; o prazo da disponibilidade é a sexta antes dele (domingo - 2)
+ULTIMO_DOMINGO_SQL = ("(date_trunc('month', {h}) + interval '1 month - 1 day')::date"
+                      " - EXTRACT(DOW FROM date_trunc('month', {h}) + interval '1 month - 1 day')::int").format(h=HOJE_SQL)
+
 EXEMPLOS_SQL = [
     ('Todos os integrantes ativos', 'SELECT id FROM usuarios_usuario WHERE is_active'),
     ('Só os líderes', 'SELECT id FROM usuarios_usuario WHERE is_active AND is_lider'),
@@ -40,12 +46,18 @@ EXEMPLOS_SQL = [
      "SELECT u.id, i.nome AS instrumento, e.data AS data_culto\nFROM escalas_escalaintegrante ei\n"
      "JOIN escalas_escala e ON e.id = ei.escala_id\nJOIN usuarios_usuario u ON u.id = ei.usuario_id\n"
      "JOIN instrumentos_instrumento i ON i.id = ei.instrumento_id\n"
-     "WHERE e.data = (SELECT MIN(data) FROM escalas_escala WHERE data >= CURRENT_DATE)"),
+     f"WHERE e.data = (SELECT MIN(data) FROM escalas_escala WHERE data >= {HOJE_SQL})"),
     ('Quem ainda não marcou nenhuma indisponibilidade no próximo mês',
      "SELECT u.id FROM usuarios_usuario u\nWHERE u.is_active AND NOT EXISTS (\n"
      "  SELECT 1 FROM escalas_indisponibilidade d\n  WHERE d.usuario_id = u.id\n"
-     "    AND d.data >= DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'\n"
-     "    AND d.data < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '2 months')"),
+     f"    AND d.data >= date_trunc('month', {HOJE_SQL}) + interval '1 month'\n"
+     f"    AND d.data < date_trunc('month', {HOJE_SQL}) + interval '2 months')"),
+    ('Disponibilidade: só na SEGUNDA da semana do prazo (use com o cron 0 9 * * 1)',
+     "-- Toda segunda o cron roda, mas só a segunda da semana do prazo devolve alguém\n"
+     f"SELECT id FROM usuarios_usuario\nWHERE is_active\n  AND {HOJE_SQL} = {ULTIMO_DOMINGO_SQL} - 6"),
+    ('Disponibilidade: só na SEXTA do prazo, último dia (use com o cron 0 9 * * 5)',
+     "-- Toda sexta o cron roda, mas só a sexta do prazo devolve alguém\n"
+     f"SELECT id FROM usuarios_usuario\nWHERE is_active\n  AND {HOJE_SQL} = {ULTIMO_DOMINGO_SQL} - 2"),
 ]
 
 
@@ -74,9 +86,6 @@ def _tabelas():
 
 
 def _descricao_agenda(aviso):
-    if aviso.agenda == 'prazo':
-        quando = 'no dia do prazo (sexta)' if aviso.dias_antes_prazo == 0 else f'{aviso.dias_antes_prazo} dia(s) antes do prazo'
-        return f'{quando}, às {aviso.hora}h'
     return f'cron: {aviso.cron}'
 
 
@@ -101,10 +110,7 @@ def _salvar(request, aviso):
     erros = []
     aviso.nome = p.get('nome', '').strip()[:100]
     aviso.ativo = p.get('ativo') == 'on'
-    aviso.agenda = p.get('agenda') if p.get('agenda') in dict(AvisoProgramado.AGENDAS) else 'cron'
     aviso.cron = ' '.join(p.get('cron', '').split())[:100]
-    aviso.dias_antes_prazo = int(p.get('dias_antes_prazo') or 0) if str(p.get('dias_antes_prazo', '0')).isdigit() else 0
-    aviso.hora = min(23, int(p.get('hora') or 9)) if str(p.get('hora', '9')).isdigit() else 9
     aviso.titulo = p.get('titulo', '').strip()[:120]
     aviso.mensagem = p.get('mensagem', '').strip()
     aviso.url = p.get('url', '').strip()[:200] or '/home/'
@@ -115,13 +121,10 @@ def _salvar(request, aviso):
         erros.append('Preencha o título e a mensagem.')
     if not aviso.url.startswith('/'):
         erros.append('A página deve ser um endereço do site, começando com "/" (ex.: /escalas/).')
-    if aviso.agenda == 'cron':
-        try:
-            programados.ler_cron(aviso.cron)
-        except programados.ErroCron as erro:
-            erros.append(f'Cron: {erro}')
-    elif aviso.dias_antes_prazo > 6:
-        erros.append('Para o prazo, use de 0 (no dia, sexta) a 6 dias antes.')
+    try:
+        programados.ler_cron(aviso.cron)
+    except programados.ErroCron as erro:
+        erros.append(f'Cron: {erro}')
     try:
         programados.destinatarios(aviso.consulta)
     except programados.ErroConsulta as erro:
@@ -142,7 +145,7 @@ def aviso_editar(request, pk=None):
             return redirect('avisos_lista')
     return render(request, 'notificacoes/aviso_form.html', {
         'aviso': aviso, 'erros': erros, 'paginas': PAGINAS, 'variaveis': VARIAVEIS_FIXAS,
-        'exemplos': EXEMPLOS_SQL, 'tabelas': _tabelas(), 'horas': range(24), 'historico': aviso.envios.all()[:15] if aviso.pk else [],
+        'exemplos': EXEMPLOS_SQL, 'tabelas': _tabelas(), 'historico': aviso.envios.all()[:15] if aviso.pk else [],
     })
 
 
@@ -190,15 +193,10 @@ def aviso_testar(request):
         return JsonResponse({'ok': False, 'erro': 'Dados inválidos.'}, status=400)
     resposta = {'ok': True}
     # próximos envios
-    if dados.get('agenda') == 'prazo':
-        aviso = AvisoProgramado(agenda='prazo', dias_antes_prazo=int(dados.get('dias_antes_prazo') or 0),
-                                hora=int(dados.get('hora') or 9))
-        resposta['proximos'] = [f'{m:%d/%m/%Y %H:%M}' for m in programados.proximos_envios(aviso, 3)]
-    else:
-        try:
-            resposta['proximos'] = [f'{m:%d/%m/%Y %H:%M}' for m in programados.proximos_cron(dados.get('cron', ''), None, 5)]
-        except programados.ErroCron as erro:
-            resposta['erro_cron'] = str(erro)
+    try:
+        resposta['proximos'] = [f'{m:%d/%m/%Y %H:%M}' for m in programados.proximos_cron(dados.get('cron', ''), None, 5)]
+    except programados.ErroCron as erro:
+        resposta['erro_cron'] = str(erro)
     # destinatários e prévia
     try:
         pessoas = programados.destinatarios(dados.get('consulta', ''))
