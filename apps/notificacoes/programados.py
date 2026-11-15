@@ -217,15 +217,28 @@ def montar(texto, variaveis):
                            texto or '')
 
 
+ENDERECO_PADRAO = '/home/'
+
+
+def montar_endereco(url, variaveis):
+    """Endereço da notificação com as variáveis trocadas (ex.: /escalas/{culto_id}/visualizar/).
+    Se sobrar variável sem valor ou não for um endereço do site, abre a tela inicial."""
+    endereco = montar(url or ENDERECO_PADRAO, variaveis).strip()
+    if '{' in endereco or not endereco.startswith('/') or endereco.startswith('//') or any(c.isspace() for c in endereco):
+        return ENDERECO_PADRAO
+    return endereco
+
+
 def mensagens_do_aviso(aviso, hoje=None):
-    """{id: (título, corpo)} para cada destinatário do aviso."""
+    """{id: (título, corpo, endereço)} para cada destinatário do aviso."""
     gerais = variaveis_gerais(hoje)
     pessoas = destinatarios(aviso.consulta)
     usuarios = {u.pk: u for u in get_user_model().objects.filter(pk__in=pessoas)}
     mensagens = {}
     for uid, extras in pessoas.items():
         variaveis = {**gerais, **variaveis_da_pessoa(usuarios[uid]), **extras}
-        mensagens[uid] = (montar(aviso.titulo, variaveis), montar(aviso.mensagem, variaveis))
+        mensagens[uid] = (montar(aviso.titulo, variaveis), montar(aviso.mensagem, variaveis),
+                          montar_endereco(aviso.url, variaveis))
     return mensagens
 
 
@@ -265,10 +278,11 @@ def enviar(aviso, chave, teste_para=None):
             escolhida = mensagens.get(teste_para.pk) or next(iter(mensagens.values()), None)
             if escolhida is None:
                 gerais = {**variaveis_gerais(), **variaveis_da_pessoa(teste_para)}
-                escolhida = (montar(aviso.titulo, gerais), montar(aviso.mensagem, gerais))
-            mensagens = {teste_para.pk: (f'[Teste] {escolhida[0]}', escolhida[1])}
+                escolhida = (montar(aviso.titulo, gerais), montar(aviso.mensagem, gerais),
+                             montar_endereco(aviso.url, gerais))
+            mensagens = {teste_para.pk: (f'[Teste] {escolhida[0]}', escolhida[1], escolhida[2])}
         envio.pessoas = len(mensagens)
-        envio.celulares = servico.enviar_personalizado(mensagens, url=aviso.url or '/home/',
+        envio.celulares = servico.enviar_personalizado(mensagens, url=ENDERECO_PADRAO,
                                                        tag=f'aviso-{aviso.pk}', em_segundo_plano=False)
     except Exception as erro:
         envio.erro = str(erro)[:2000]

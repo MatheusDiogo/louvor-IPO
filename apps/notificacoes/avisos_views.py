@@ -42,8 +42,9 @@ EXEMPLOS_SQL = [
      "SELECT u.id, i.nome AS instrumento\nFROM usuarios_usuario u\n"
      "JOIN usuarios_usuario_instrumentos ui ON ui.usuario_id = u.id\n"
      "JOIN instrumentos_instrumento i ON i.id = ui.instrumento_id\nWHERE u.is_active AND i.nome = 'Violão'"),
-    ('Escalados no próximo culto (com {instrumento} e {data_culto})',
-     "SELECT u.id, i.nome AS instrumento, e.data AS data_culto\nFROM escalas_escalaintegrante ei\n"
+    ('Escalados no próximo culto (com {instrumento}, {data_culto} e {culto_id} para o endereço)',
+     "SELECT u.id, i.nome AS instrumento, to_char(e.data, 'DD/MM') AS data_culto, e.id AS culto_id\n"
+     "FROM escalas_escalaintegrante ei\n"
      "JOIN escalas_escala e ON e.id = ei.escala_id\nJOIN usuarios_usuario u ON u.id = ei.usuario_id\n"
      "JOIN instrumentos_instrumento i ON i.id = ei.instrumento_id\n"
      f"WHERE e.data = (SELECT MIN(data) FROM escalas_escala WHERE data >= {HOJE_SQL})"),
@@ -212,7 +213,8 @@ def aviso_testar(request):
         variaveis = {**gerais, **programados.variaveis_da_pessoa(u), **extras}
         linhas.append({'id': uid, 'nome': u.get_full_name() or u.email, 'extras': extras,
                        'titulo': programados.montar(dados.get('titulo', ''), variaveis),
-                       'mensagem': programados.montar(dados.get('mensagem', ''), variaveis)})
+                       'mensagem': programados.montar(dados.get('mensagem', ''), variaveis),
+                       'url': programados.montar_endereco(dados.get('url', ''), variaveis)})
     resposta.update({
         'total': len(pessoas),
         'extras': sorted({k for v in pessoas.values() for k in v}),

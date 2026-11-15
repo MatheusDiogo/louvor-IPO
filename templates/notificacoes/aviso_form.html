@@ -93,10 +93,12 @@
                 {% for nome, descricao in variaveis %}<button type="button" class="btn btn-sm btn-light border rounded-pill variavel" data-variavel="{{ nome }}" title="{{ descricao }}">{{ "{" }}{{ nome }}{{ "}" }}</button>{% endfor %}
             </div>
             <div class="row g-2 mt-2">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <label class="form-label small fw-bold text-secondary" for="campoUrl">Ao tocar na notificação, abrir</label>
-                    <input type="text" name="url" id="campoUrl" value="{{ aviso.url }}" list="listaPaginas" class="form-control" style="border-radius: 12px;">
+                    <input type="text" name="url" id="campoUrl" value="{{ aviso.url }}" list="listaPaginas" class="form-control campo-texto font-monospace small"
+                           style="border-radius: 12px;" autocapitalize="none" spellcheck="false">
                     <datalist id="listaPaginas">{% for url, rotulo in paginas %}<option value="{{ url }}">{{ rotulo }}</option>{% endfor %}</datalist>
+                    <small class="text-muted">Aceita variáveis da consulta: com <code>e.id AS culto_id</code> no SELECT, use <code>/escalas/{culto_id}/visualizar/</code> (tela do culto) ou <code>/escalas/{culto_id}/cifras/</code> (todas as cifras).</small>
                 </div>
             </div>
         </div>
@@ -178,7 +180,7 @@
             const alvo = document.getElementById('previa');
             const proximos = document.getElementById('proximos');
             const corpo = {
-                cron: campo('cron').value, consulta: campo('consulta').value,
+                cron: campo('cron').value, consulta: campo('consulta').value, url: campo('url').value,
                 titulo: campo('titulo').value, mensagem: campo('mensagem').value,
             };
             let d;
@@ -207,13 +209,14 @@
 
             (d.linhas || []).slice(0, 5).forEach(l => {
                 const caixa = criar('div', 'previa-notificacao');
-                caixa.append(criar('div', 'text-muted', l.nome), criar('div', 'fw-bold', l.titulo), criar('div', '', l.mensagem));
+                caixa.append(criar('div', 'text-muted', l.nome), criar('div', 'fw-bold', l.titulo), criar('div', '', l.mensagem),
+                             criar('div', 'text-muted font-monospace mt-1', '→ abre ' + l.url));
                 alvo.append(caixa);
             });
             if (d.total > 5) alvo.append(criar('div', 'text-muted', `... e mais ${d.total - 5}.`));
         }, 400);
     }
-    ['cron', 'consulta', 'titulo', 'mensagem'].forEach(n => campo(n).addEventListener('input', previa));
+    ['cron', 'consulta', 'titulo', 'mensagem', 'url'].forEach(n => campo(n).addEventListener('input', previa));
     document.getElementById('btnPrevia').addEventListener('click', previa);
     previa();
 })();

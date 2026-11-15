@@ -73,16 +73,17 @@ def enviar(usuarios, titulo, corpo, url='/home/', tag=None, ttl=24 * 3600, em_se
 
 
 def enviar_personalizado(mensagens, url='/home/', tag=None, ttl=24 * 3600, em_segundo_plano=True):
-    """`mensagens`: {usuário: (título, corpo)} — uma mensagem diferente para cada pessoa."""
+    """`mensagens`: {usuário: (título, corpo)} ou {usuário: (título, corpo, endereço)} — uma mensagem
+    diferente para cada pessoa; sem o endereço, vale o `url` geral."""
     if not configurado() or not mensagens:
         return 0
-    itens = [(getattr(u, 'pk', u), titulo, corpo) for u, (titulo, corpo) in mensagens.items()]
+    itens = [(getattr(u, 'pk', u), m[0], m[1], m[2] if len(m) > 2 and m[2] else url) for u, m in mensagens.items()]
 
     def tarefa():
         enviados = 0
         try:
-            for uid, titulo, corpo in itens:
-                payload = json.dumps({'titulo': titulo, 'corpo': corpo, 'url': url, 'tag': tag or ''},
+            for uid, titulo, corpo, endereco in itens:
+                payload = json.dumps({'titulo': titulo, 'corpo': corpo, 'url': endereco, 'tag': tag or ''},
                                      ensure_ascii=False)
                 enviados += _enviar_agora([uid], payload, ttl)
         finally:
