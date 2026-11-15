@@ -129,6 +129,7 @@ def salvar_integrante(request):
     email = request.POST.get('email', '').strip().lower()
     instrumentos_ids = request.POST.getlist('instrumentos')
     is_lider = request.POST.get('is_lider') == 'on'
+    is_cifreiro = request.POST.get('is_cifreiro') == 'on'
 
     duplicado = Usuario.objects.filter(email__iexact=email)
     if id_usuario:
@@ -148,6 +149,7 @@ def salvar_integrante(request):
         # Um líder não pode remover a própria liderança (perderia o acesso)
         if usuario != request.user:
             usuario.is_lider = is_lider
+        usuario.is_cifreiro = is_cifreiro
         usuario.save()
         messages.success(request, f'{usuario.get_full_name()} atualizado(a).')
     else:
@@ -159,6 +161,7 @@ def salvar_integrante(request):
             last_name=last_name,
             password='louvoripo',
             is_lider=is_lider,
+            is_cifreiro=is_cifreiro,
         )
         messages.success(request, f'{usuario.get_full_name()} cadastrado(a). Senha inicial: louvoripo')
 

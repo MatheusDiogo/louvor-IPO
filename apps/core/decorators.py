@@ -11,3 +11,13 @@ def requer_lider(view_func):
             raise PermissionDenied
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def requer_editor_musicas(view_func):
+    """Líder ou cifreiro (cadastro e edição das músicas)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.pode_editar_musicas:
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return wrapper

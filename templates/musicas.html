@@ -10,7 +10,7 @@
             <p class="page-subtitle">{{ musicas|length }} música{{ musicas|length|pluralize }} · toque em uma para ver a cifra.</p>
         </div>
 
-        {% if user.is_lider %}
+        {% if user.pode_editar_musicas %}
         <div class="d-flex gap-2 flex-wrap header-actions">
             <a href="{% url 'relatorio_musicas' %}" class="btn btn-outline-success rounded-pill px-3 flex-grow-1">
                 <i class="bi bi-bar-chart me-2"></i>Relatório
@@ -34,7 +34,7 @@
             <i class="bi bi-search text-muted"></i>
             <input type="search" id="buscaMusica" placeholder="Buscar por nome ou trecho da letra..." aria-label="Buscar música">
         </div>
-        {% if user.is_lider and a_revisar %}
+        {% if user.pode_editar_musicas and a_revisar %}
         <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3" id="filtroRevisar" aria-pressed="false">
             <i class="bi bi-exclamation-circle me-1"></i>A revisar ({{ a_revisar }})
         </button>
@@ -52,7 +52,7 @@
                         <div class="card-icon card-icon-sm d-none d-sm-flex">🎵</div>
                         <div class="text-break-word" style="min-width: 0;">
                             <span class="fw-medium">{{ musica.nome }}</span>
-                            {% if user.is_lider and musica.revisar %}
+                            {% if user.pode_editar_musicas and musica.revisar %}
                             <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">Revisar</span>
                             {% endif %}
                             {% if not musica.cifra %}
@@ -68,7 +68,7 @@
                         <i class="bi bi-youtube"></i>
                     </a>
                     {% endif %}
-                    {% if user.is_lider %}
+                    {% if user.pode_editar_musicas %}
                     <a href="{% url 'musica_editar' musica.id %}" class="btn btn-sm btn-outline-success border-0 rounded-pill flex-shrink-0" aria-label="Editar {{ musica.nome }}">
                         <i class="bi bi-pencil"></i>
                     </a>
@@ -79,7 +79,7 @@
             <li class="list-group-item text-center py-5 text-muted">
                 <i class="bi bi-music-note-list d-block fs-2 mb-2 opacity-50"></i>
                 Nenhuma música no repertório ainda.
-                {% if user.is_lider %}<br><a href="{% url 'importar_pdf' %}" class="text-success">Importe o caderno de cifras em PDF</a> ou cadastre uma nova.{% endif %}
+                {% if user.pode_editar_musicas %}<br><a href="{% url 'importar_pdf' %}" class="text-success">Importe o caderno de cifras em PDF</a> ou cadastre uma nova.{% endif %}
             </li>
             {% endfor %}
             <li class="list-group-item text-center py-4 text-muted" id="semResultado" style="display: none;">Nenhuma música encontrada.</li>

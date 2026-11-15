@@ -53,6 +53,7 @@ function editarIntegrante(btn) {
     document.getElementById("inst_sobrenome").value = d.sobrenome;
     document.getElementById("inst_email").value = d.email;
     document.getElementById("inst_lider").checked = d.lider === "1";
+    document.getElementById("inst_cifreiro").checked = d.cifreiro === "1";
 
     const ids = (d.instrumentos || "").split(",").filter(Boolean);
     document.querySelectorAll("#modalIntegrante input[name='instrumentos']").forEach(cb => {

@@ -19,7 +19,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.core.decorators import requer_lider
+from apps.core.decorators import requer_editor_musicas
 from apps.core.utils import chave_alfabetica
 from .cifra import renderizar_html
 from .importador import analisar_pdf
@@ -91,7 +91,7 @@ def _montar_plano(musicas_pdf):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 def importar_pdf(request):
     if request.method != 'POST':
         return render(request, 'musicas_importar.html')
@@ -129,7 +129,7 @@ def importar_pdf(request):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 def importar_pdf_previa(request, token, numero):
     """Mostra como a música ficou convertida, antes de importar."""
     musica = next((m for m in analisar_pdf(_ler_temporario(token)) if m.numero == numero), None)
@@ -142,7 +142,7 @@ def importar_pdf_previa(request, token, numero):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def importar_pdf_confirmar(request):
     token = request.POST.get('token', '')

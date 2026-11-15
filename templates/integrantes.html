@@ -70,6 +70,8 @@
                     <span class="badge rounded-pill bg-secondary flex-shrink-0">Inativo</span>
                     {% elif integrante.is_lider %}
                     <span class="badge rounded-pill bg-warning text-dark flex-shrink-0">Líder</span>
+                    {% elif integrante.is_cifreiro %}
+                    <span class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle flex-shrink-0">Cifreiro</span>
                     {% endif %}
                 </div>
 
@@ -88,6 +90,7 @@
                             data-sobrenome="{{ integrante.last_name }}"
                             data-email="{{ integrante.email }}"
                             data-lider="{{ integrante.is_lider|yesno:'1,0' }}"
+                            data-cifreiro="{{ integrante.is_cifreiro|yesno:'1,0' }}"
                             data-instrumentos="{% for inst in integrante.instrumentos.all %}{{ inst.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
                             onclick="editarIntegrante(this)">
                         <i class="bi bi-pencil me-1"></i>Editar
@@ -160,6 +163,10 @@
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" name="is_lider" id="inst_lider">
                         <label class="form-check-label small" for="inst_lider">Líder (pode gerenciar escalas, integrantes e instrumentos)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="is_cifreiro" id="inst_cifreiro">
+                        <label class="form-check-label small" for="inst_cifreiro">Cifreiro (pode cadastrar, editar e importar músicas e cuidar dos acordes; não exclui músicas)</label>
                     </div>
                 </div>
 

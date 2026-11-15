@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from apps.core.decorators import requer_lider
+from apps.core.decorators import requer_editor_musicas
 from apps.core.utils import chave_alfabetica, subtrair_meses
 from apps.escalas.models import Escala, EscalaMusica
 from .cifra_pdf import ALTURA, CINZA, LARGURA, MARGEM, PRETO, VERDE, _largura, _limpar
@@ -114,7 +114,7 @@ def _pdf(linhas, inicio, fim, cultos):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 def relatorio_musicas(request):
     inicio, fim = _periodo(request)
     incluir_nao_tocadas = request.GET.get('todas') == '1'

@@ -13,7 +13,7 @@
 
     <nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Seções da ajuda">
         <a href="#integrantes" class="btn btn-sm btn-outline-success rounded-pill">Para todos os integrantes</a>
-        {% if user.is_lider %}<a href="#lideres" class="btn btn-sm btn-outline-success rounded-pill">Para líderes</a>{% endif %}
+        {% if user.pode_editar_musicas %}<a href="#lideres" class="btn btn-sm btn-outline-success rounded-pill">{% if user.is_lider %}Para líderes{% else %}Para cifreiros{% endif %}</a>{% endif %}
         <a href="#duvidas" class="btn btn-sm btn-outline-success rounded-pill">Dúvidas frequentes</a>
     </nav>
 
@@ -178,11 +178,15 @@
         </div>
     </div>
 
-    {% if user.is_lider %}
-    <!-- ================================================================== LÍDERES -->
-    <h3 class="h5 fw-bold mb-3" id="lideres" style="color: var(--primary-green);"><i class="bi bi-person-gear me-2"></i>Para líderes</h3>
+    {% if user.pode_editar_musicas %}
+    <!-- ================================================================== LÍDERES (e cifreiros: só a parte das músicas) -->
+    <h3 class="h5 fw-bold mb-3" id="lideres" style="color: var(--primary-green);"><i class="bi bi-person-gear me-2"></i>{% if user.is_lider %}Para líderes{% else %}Para cifreiros{% endif %}</h3>
+    {% if not user.is_lider %}
+    <p class="small text-muted">Como cifreiro, você cuida das músicas: cadastrar, editar, importar, acordes e relatório. Excluir músicas, escalas, cultos e integrantes ficam com os líderes.</p>
+    {% endif %}
 
     <div class="accordion mb-4" id="ajudaLideres">
+        {% if user.is_lider %}
         <div class="accordion-item">
             <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-integrantes">
                 <i class="bi bi-person-check me-2 text-success"></i>Integrantes: aprovar cadastros e definir líderes</button></h4>
@@ -193,7 +197,7 @@
                         <li>Em <strong>Integrantes</strong>, a seção <strong>Aguardando aprovação</strong> tem os botões <strong>Aprovar</strong> e <strong>Recusar</strong> (recusar apaga o cadastro).</li>
                         <li>Integrantes não são excluídos: use a chave <strong>Ativo</strong> no cartão. Desativado não entra no site, não aparece para escalar e não recebe avisos, mas as escalas antigas continuam com o nome dele. Dá para ativar de novo quando quiser.</li>
                         <li><strong>Novo Integrante</strong> cadastra alguém direto, com a senha inicial <strong>louvoripo</strong>.</li>
-                        <li>Em <strong>Editar</strong> você ajusta nome, e-mail, instrumentos e liga a chave <strong>Líder</strong>.</li>
+                        <li>Em <strong>Editar</strong> você ajusta nome, e-mail, instrumentos e liga a chave <strong>Líder</strong> ou <strong>Cifreiro</strong> (cuida das músicas: cadastrar, editar, importar e acordes, sem excluir; não mexe em escalas nem cultos).</li>
                         <li>Os <strong>instrumentos</strong> marcados no integrante definem em quais colunas da escala ele pode ser colocado.</li>
                     </ul>
                 </div>
@@ -249,6 +253,8 @@
             </div>
         </div>
 
+        {% endif %}
+
         <div class="accordion-item">
             <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#l-cifras">
                 <i class="bi bi-pencil-square me-2 text-success"></i>Cadastrar e editar cifras</button></h4>
@@ -286,7 +292,7 @@ E [A]vimos sua [E/G#]glória
                         <li>Toque em <strong>Importar</strong>.</li>
                     </ol>
                     <p class="mb-2">O PDF precisa ter o título numerado em destaque (“12. Salmo 63”), a linha “Tom: G” logo abaixo e os acordes acima da letra. O refrão em itálico é reconhecido.</p>
-                    <p class="mb-0">As músicas importadas ficam com a etiqueta <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle">Revisar</span> (só líderes veem). Abra no editor, ajuste o que precisar e salve: a etiqueta some. O botão <strong>A revisar</strong> na lista filtra só essas.</p>
+                    <p class="mb-0">As músicas importadas ficam com a etiqueta <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle">Revisar</span> (só líderes e cifreiros veem). Abra no editor, ajuste o que precisar e salve: a etiqueta some. O botão <strong>A revisar</strong> na lista filtra só essas.</p>
                 </div>
             </div>
         </div>
@@ -332,7 +338,7 @@ E [A]vimos sua [E/G#]glória
             <h4 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#d-acorde">
                 Encontrei um acorde errado ou fora do lugar</button></h4>
             <div id="d-acorde" class="accordion-collapse collapse" data-bs-parent="#ajudaDuvidas">
-                <div class="accordion-body">Avise um líder do louvor{% if user.is_lider %}, ou corrija no editor da música (lápis <i class="bi bi-pencil"></i>){% endif %}. A correção vale para todos os tons e todos os cultos.</div>
+                <div class="accordion-body">Avise um líder do louvor{% if user.pode_editar_musicas %}, ou corrija no editor da música (lápis <i class="bi bi-pencil"></i>){% endif %}. A correção vale para todos os tons e todos os cultos.</div>
             </div>
         </div>
         <div class="accordion-item">

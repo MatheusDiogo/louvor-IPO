@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.core.decorators import requer_lider
+from apps.core.decorators import requer_editor_musicas
 from .acordes import (
     FORMULAS, ROTULOS_TIPOS, analisar, dedos_simples, gerar_com_baixo, mapa_de_nomes, normalizar_grafia,
     ordem_de_exibicao,
@@ -24,7 +24,7 @@ def _tipos():
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 def acordes_view(request):
     tipos = _tipos()
     posicao = {tipo: i for i, (tipo, _) in enumerate(tipos)}
@@ -72,7 +72,7 @@ def _dados_do_acorde(nome):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_GET
 def acordes_buscar(request):
     return JsonResponse(_dados_do_acorde(request.GET.get('nome', '')))
@@ -103,7 +103,7 @@ def _validar(dados):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def acordes_salvar(request):
     """Cria ou altera um desenho. Alterar um desenho da base cria uma cópia da equipe e esconde o original."""
@@ -131,7 +131,7 @@ def acordes_salvar(request):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def acordes_ativo(request, pk):
     desenho = get_object_or_404(DesenhoAcorde, pk=pk)
@@ -141,7 +141,7 @@ def acordes_ativo(request, pk):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def acordes_mover(request, pk):
     """Troca a posição do desenho com o vizinho na ordem do "Variar" (direcao = -1 ou 1)."""
@@ -162,7 +162,7 @@ def acordes_mover(request, pk):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def acordes_excluir(request, pk):
     desenho = get_object_or_404(DesenhoAcorde, pk=pk)
@@ -173,7 +173,7 @@ def acordes_excluir(request, pk):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def grafia_salvar(request):
     digitada = request.POST.get('escrita', '').strip()
@@ -196,7 +196,7 @@ def grafia_salvar(request):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def grafia_excluir(request, pk):
     grafia = get_object_or_404(NomeAcorde, pk=pk)

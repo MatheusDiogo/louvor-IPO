@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from apps.core.decorators import requer_lider
+from apps.core.decorators import requer_editor_musicas, requer_lider
 from apps.core.utils import chave_alfabetica
 from .cifra import (
     converter_cifra_comum, extrair_metadados, normalizar_tom, opcoes_de_tom,
@@ -61,7 +61,7 @@ def musica_pdf(request, musica_id):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 def musica_editar(request, musica_id=None):
     """Cria ou edita uma música (nome, tom, YouTube e cifra em ChordPro)."""
     musica = get_object_or_404(Musica, id=musica_id) if musica_id else Musica()
@@ -96,7 +96,7 @@ def musica_editar(request, musica_id=None):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def musica_previa(request):
     """HTML da cifra enquanto o líder digita no editor."""
@@ -104,7 +104,7 @@ def musica_previa(request):
 
 
 @login_required
-@requer_lider
+@requer_editor_musicas
 @require_POST
 def musica_converter(request):
     """Converte "acordes em cima da letra" (colado do Cifra Club, Word...) para ChordPro."""
@@ -114,7 +114,7 @@ def musica_converter(request):
 
 
 @login_required
-@requer_lider
+@requer_lider  # excluir tira a música dos cultos e do histórico: só o líder
 @require_POST
 def excluir_musica(request, id):
     musica = get_object_or_404(Musica, id=id)
