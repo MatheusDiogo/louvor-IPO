@@ -18,7 +18,7 @@ from apps.core.decorators import requer_lider
 from apps.core.utils import chave_alfabetica
 from apps.instrumentos.models import Instrumento
 from apps.notificacoes import avisos, servico
-from .models import Escala, EscalaIntegrante, PublicacaoEscala
+from .models import Escala, EscalaIntegrante, Indisponibilidade, PublicacaoEscala
 
 Usuario = get_user_model()
 
@@ -129,6 +129,22 @@ def escala_equipe(request):
         key=lambda a: (-a['vezes'], chave_alfabetica(a['nome'])),
     )
 
+    # Indisponibilidades informadas pelos integrantes neste mês (a justificativa só os líderes veem)
+    indisponiveis = {}  # data -> {usuário: justificativa}
+    for ind in Indisponibilidade.objects.filter(data__range=(inicio, fim), usuario__is_active=True):
+        indisponiveis.setdefault(ind.data, {})[ind.usuario_id] = ind.justificativa
+    for linha in linhas:
+        do_dia = indisponiveis.get(linha['escala'].data, {})
+        for celula in linha['celulas']:
+            for m in celula['membros']:
+                m['indisponivel'] = do_dia.get(m['id'], '') if request.user.is_lider else ''
+    lista_indisponiveis = [
+        {'data': dia, 'culto': dia in {e.data for e in escalas},
+         'pessoas': sorted(({'nome': nomes.get(uid, '?'), 'justificativa': just} for uid, just in pessoas.items()),
+                           key=lambda p: chave_alfabetica(p['nome']))}
+        for dia, pessoas in sorted(indisponiveis.items())
+    ]
+
     nomes_instrumentos = {inst.id: inst.nome for inst in instrumentos}
 
     # Dados usados pelo modal de edição de cada célula
@@ -156,6 +172,8 @@ def escala_equipe(request):
             for e in escalas
         },
         'datas': {e.id: e.data.strftime('%d/%m') for e in escalas},
+        # quem não pode em cada culto: {culto: {pessoa: justificativa}}
+        'indisponiveis': {e.id: indisponiveis.get(e.data, {}) for e in escalas},
         'nomes': nomes,
         'contagem': dict(contagem),
         'limite': LIMITE_ESCALAS_MES,
@@ -174,6 +192,7 @@ def escala_equipe(request):
         'linhas': linhas,
         'alertas': alertas,
         'pode_editar': pode_editar,
+        'indisponiveis': lista_indisponiveis if pode_editar else [],
         'dados_modal': dados_modal if pode_editar else None,  # só os líderes usam o modal de edição
         'limite': LIMITE_ESCALAS_MES,
         'hoje': timezone.localdate(),

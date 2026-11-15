@@ -75,6 +75,25 @@ class EscalaIntegrante(models.Model):
         return f"{self.usuario} ({self.instrumento}) em {self.escala.data}"
 
 
+# Dia em que o integrante não pode servir (informado por ele até o prazo do mês)
+class Indisponibilidade(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="indisponibilidades"
+    )
+    data = models.DateField()
+    justificativa = models.CharField(max_length=200)
+    atualizada_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('usuario', 'data')
+        ordering = ['data']
+
+    def __str__(self):
+        return f"{self.usuario} indisponível em {self.data:%d/%m/%Y}"
+
+
 # Escala de um mês publicada (avisa todos por notificação)
 class PublicacaoEscala(models.Model):
     mes = models.DateField(unique=True, help_text="Primeiro dia do mês publicado")

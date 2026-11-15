@@ -10,6 +10,9 @@
             <p class="page-subtitle">Quem toca e canta em cada culto.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap header-actions">
+            <a href="{% url 'minha_disponibilidade' %}" class="btn btn-outline-success rounded-pill px-3 flex-grow-1">
+                <i class="bi bi-calendar-x me-2"></i>Minha disponibilidade
+            </a>
             <a href="{% url 'escala_equipe_exportar' %}?inicio={{ mes|date:'Y-m-d' }}" class="btn btn-outline-success rounded-pill px-4 flex-grow-1">
                 <i class="bi bi-image me-2"></i>Exportar
             </a>
@@ -71,8 +74,29 @@
         <span id="alertaNomes">{% for a in alertas %}<strong>{{ a.nome }}</strong> ({{ a.vezes }}x){% if not forloop.last %}, {% endif %}{% endfor %}</span>
     </div>
 
+    {% if pode_editar and indisponiveis %}
+    <!-- Líder: quem informou que não pode, e por quê -->
+    <details class="table-card px-3 py-2 mb-3 lista-indisponiveis">
+        <summary class="small fw-semibold">
+            <i class="bi bi-calendar-x text-danger me-1"></i>Indisponibilidades informadas em {{ mes|date:"F"|lower }}
+            <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis ms-1">{{ indisponiveis|length }} dia{{ indisponiveis|length|pluralize }}</span>
+        </summary>
+        <div class="pt-2">
+            {% for dia in indisponiveis %}
+            <div class="py-1 small {% if not forloop.last %}border-bottom{% endif %}">
+                <strong>{{ dia.data|date:"d/m" }}</strong> <span class="text-muted">{{ dia.data|date:"D" }}</span>{% if not dia.culto %} <span class="text-muted fst-italic">(sem culto cadastrado)</span>{% endif %}
+                {% for p in dia.pessoas %}
+                <div class="ms-3"><span class="fw-semibold">{{ p.nome }}</span>: {{ p.justificativa }}</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+
     <p class="small text-muted mb-2">
         <i class="bi bi-star-fill text-warning"></i> Ministrante &nbsp;·&nbsp;
+        {% if pode_editar %}<s class="text-danger">Riscado</s> = indisponível no dia &nbsp;·&nbsp;{% endif %}
         <span class="text-danger fw-semibold">Vermelho</span> = escalado {{ limite }}x ou mais no mês
         {% if pode_editar %}&nbsp;·&nbsp; Toque em uma célula para editar e depois em <strong>Salvar</strong>.{% endif %}
     </p>
@@ -112,7 +136,7 @@
                             {% if pode_editar %}<button type="button" class="celula-escala" data-escala="{{ linha.escala.pk }}" data-instrumento="{{ celula.instrumento.pk }}" onclick="editarCelula(this)">{% else %}<div class="celula-escala celula-leitura">{% endif %}
                                 <span class="membros-celula" data-vazio="—">
                                     {% for m in celula.membros %}
-                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
                                     {% empty %}
                                     <span class="text-muted opacity-50">—</span>
                                     {% endfor %}
@@ -149,7 +173,7 @@
                 <span class="text-secondary small fw-semibold instrumento-label">{{ celula.instrumento.nome }}</span>
                 <span class="flex-grow-1 text-end membros-celula" data-vazio="Toque para escalar">
                     {% for m in celula.membros %}
-                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}">{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
+                    <span class="membro{% if m.alerta %} text-danger fw-semibold{% endif %}{% if m.id == user.id %} membro-eu{% endif %}{% if m.indisponivel %} membro-indisponivel{% endif %}"{% if m.indisponivel %} title="Indisponível: {{ m.indisponivel }}"{% endif %}>{{ m.nome }}{% if m.ministrante %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</span>
                     {% empty %}
                     <span class="text-muted opacity-50">{% if pode_editar %}Toque para escalar{% else %}—{% endif %}</span>
                     {% endfor %}
@@ -276,7 +300,10 @@
             }
             membros.forEach(uid => {
                 const span = document.createElement('span');
-                span.className = 'membro' + ((total[uid] || 0) >= dados.limite ? ' text-danger fw-semibold' : '');
+                const motivo = (dados.indisponiveis[e] || {})[uid];
+                span.className = 'membro' + ((total[uid] || 0) >= dados.limite ? ' text-danger fw-semibold' : '')
+                    + (motivo ? ' membro-indisponivel' : '');
+                if (motivo) span.title = 'Indisponível: ' + motivo;
                 span.textContent = dados.nomes[uid] || '?';
                 if (String(estado.ministrante[e] || '') === String(uid)) {
                     span.insertAdjacentHTML('beforeend', ' <i class="bi bi-star-fill text-warning"></i>');
@@ -364,6 +391,16 @@
             info.className = 'd-block ' + (vezes >= dados.limite ? 'text-danger fw-semibold' : 'text-muted');
             info.textContent = vezes ? `${vezes}x no mês` : 'Nenhuma vez no mês';
             nome.append(info);
+            // Informou que não pode neste dia: aparece em destaque, com o motivo (o líder decide)
+            const motivo = (dados.indisponiveis[e] || {})[id];
+            if (motivo) {
+                const aviso = document.createElement('small');
+                aviso.className = 'd-block text-danger fw-semibold';
+                aviso.innerHTML = '<i class="bi bi-calendar-x me-1"></i>';
+                aviso.append(`Indisponível: ${motivo}`);
+                nome.append(aviso);
+                linha.classList.add('linha-indisponivel');
+            }
             if (emOutro) {
                 const aviso = document.createElement('small');
                 aviso.className = 'd-block text-warning-emphasis fw-semibold';

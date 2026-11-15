@@ -1,5 +1,5 @@
 from django.urls import path
-from . import equipe, views
+from . import disponibilidade, equipe, views
 
 urlpatterns = [
     # Lista de escalas futuras
@@ -32,5 +32,10 @@ urlpatterns = [
     path('equipe/salvar/', equipe.escala_equipe_salvar, name='escala_equipe_salvar'),
     path('equipe/publicar/', equipe.escala_equipe_publicar, name='escala_equipe_publicar'),
     path('equipe/exportar/', equipe.escala_equipe_exportar, name='escala_equipe_exportar'),
+
+    # Indisponibilidade de cada integrante (com justificativa, até o prazo do mês)
+    path('disponibilidade/', disponibilidade.minha_disponibilidade, name='minha_disponibilidade'),
+    path('disponibilidade/salvar/', disponibilidade.disponibilidade_salvar, name='disponibilidade_salvar'),
+    path('disponibilidade/remover/', disponibilidade.disponibilidade_remover, name='disponibilidade_remover'),
 
 ]

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Minha disponibilidade | Louvor IPO{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'escala_equipe' %}?mes={{ mes|date:'Y-m' }}" class="text-success text-decoration-none">Escalas</a></li>
+            <li class="breadcrumb-item active">Minha disponibilidade</li>
+        </ol>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Minha disponibilidade</h2>
+            <p class="page-subtitle">Marque os dias em que você <strong>não pode</strong> servir, com o motivo. Só os líderes veem a justificativa.</p>
+        </div>
+    </div>
+
+    <!-- Navegação entre meses -->
+    <div class="d-flex align-items-center justify-content-between mb-3 table-card px-2 py-2">
+        <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Mês anterior"><i class="bi bi-chevron-left"></i></a>
+        <span class="fw-bold text-uppercase" style="color: var(--primary-green); letter-spacing: 1px;">{{ mes|date:"F Y" }}</span>
+        {% if pode_avancar %}
+        <a href="?mes={{ mes_proximo|date:'Y-m' }}" class="btn btn-light rounded-pill" aria-label="Próximo mês"><i class="bi bi-chevron-right"></i></a>
+        {% else %}<span class="btn btn-light rounded-pill disabled" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
+    </div>
+
+    {% if aberto %}
+    <div class="alert alert-success rounded-3 small py-2">
+        <i class="bi bi-calendar-check me-1"></i>Você pode informar até <strong>{{ prazo|date:"l, d/m" }}</strong>. Toque num dia para marcar.
+    </div>
+    {% else %}
+    <div class="alert alert-secondary rounded-3 small py-2">
+        <i class="bi bi-lock me-1"></i>O prazo para informar {{ mes|date:"F"|lower }} terminou em {{ prazo|date:"d/m" }}. Só é possível ver o que foi informado.
+    </div>
+    {% endif %}
+
+    <!-- Calendário -->
+    <div class="table-card p-2 p-md-3 mb-3">
+        <div class="calendario-disp">
+            {% for nome in "DSTQQSS" %}<div class="cal-semana">{{ nome }}</div>{% endfor %}
+            {% for semana in semanas %}{% for dia in semana %}
+            {% if dia %}
+            <button type="button" class="cal-dia{% if dia.indisponivel %} indisponivel{% endif %}{% if dia.culto %} tem-culto{% endif %}{% if dia.data == hoje %} hoje{% endif %}"
+                    data-data="{{ dia.data|date:'Y-m-d' }}" data-rotulo="{{ dia.data|date:'l, d/m' }}"
+                    data-justificativa="{{ dia.indisponivel.justificativa|default:'' }}"
+                    {% if not aberto %}disabled{% endif %}
+                    aria-label="{{ dia.data|date:'d/m' }}{% if dia.culto %}, tem culto{% endif %}{% if dia.indisponivel %}, indisponível{% endif %}">
+                <span class="cal-numero">{{ dia.data.day }}</span>
+                {% if dia.indisponivel %}<i class="bi bi-x-circle-fill"></i>{% elif dia.culto %}<span class="cal-ponto"></span>{% endif %}
+            </button>
+            {% else %}<div></div>{% endif %}
+            {% endfor %}{% endfor %}
+        </div>
+        <div class="small text-muted mt-2 d-flex flex-wrap gap-3">
+            <span><span class="cal-ponto d-inline-block"></span> dia com culto</span>
+            <span><i class="bi bi-x-circle-fill text-danger"></i> indisponível</span>
+        </div>
+    </div>
+
+    <!-- Lista -->
+    <div class="table-card p-3 p-md-4">
+        <h6 class="fw-bold mb-2" style="color: var(--primary-green);"><i class="bi bi-list-check me-2"></i>Dias indisponíveis em {{ mes|date:"F"|lower }}</h6>
+        {% for item in minhas %}
+        <div class="d-flex align-items-start gap-2 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+            <div class="flex-grow-1" style="min-width: 0;">
+                <strong>{{ item.data|date:"d/m" }}</strong> <span class="text-muted small">{{ item.data|date:"l" }}</span>
+                <div class="small text-break-word">{{ item.justificativa }}</div>
+            </div>
+            {% if aberto %}
+            <form method="post" action="{% url 'disponibilidade_remover' %}" class="m-0">
+                {% csrf_token %}
+                <input type="hidden" name="data" value="{{ item.data|date:'Y-m-d' }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-pill" aria-label="Ficar disponível em {{ item.data|date:'d/m' }}"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="small text-muted mb-0">Nenhum dia marcado: você está disponível no mês todo.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% if aberto %}
+<!-- Modal: marcar dia -->
+<div class="modal fade" id="modalDia" tabindex="-1" aria-labelledby="tituloDia">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'disponibilidade_salvar' %}">
+                {% csrf_token %}
+                <input type="hidden" name="data" id="campoData">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" id="tituloDia" style="color: var(--primary-green);"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <label class="form-label small fw-bold text-secondary" for="campoJustificativa">Por que você não pode neste dia?</label>
+                    <textarea name="justificativa" id="campoJustificativa" class="form-control" rows="3" maxlength="200" required
+                              placeholder="Ex.: viagem, plantão no trabalho, aniversário na família..." style="border-radius: 15px;"></textarea>
+                    <small class="text-muted">Só os líderes veem.</small>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="submit" form="formRemover" class="btn btn-outline-danger rounded-pill px-3 me-auto" id="btnRemover">Estou disponível</button>
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login btn-acao">Salvar</button>
+                </div>
+            </form>
+            <form method="post" action="{% url 'disponibilidade_remover' %}" id="formRemover" class="d-none">
+                {% csrf_token %}
+                <input type="hidden" name="data" id="campoDataRemover">
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if aberto %}
+<script>
+document.querySelectorAll('.cal-dia').forEach(botao => botao.addEventListener('click', () => {
+    const justificativa = botao.dataset.justificativa;
+    document.getElementById('tituloDia').textContent = botao.dataset.rotulo;
+    document.getElementById('campoData').value = botao.dataset.data;
+    document.getElementById('campoDataRemover').value = botao.dataset.data;
+    document.getElementById('campoJustificativa').value = justificativa;
+    document.getElementById('btnRemover').hidden = !justificativa;  // só para dia já marcado
+    abrirModal('modalDia');
+    setTimeout(() => document.getElementById('campoJustificativa').focus(), 300);
+}));
+</script>
+{% endif %}
+{% endblock %}
