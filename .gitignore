@@ -210,3 +210,6 @@ media/
 .dockerignore
 # Gerada pelo collectstatic no deploy (Dockerfile); não versionar
 staticfiles/
+
+# PDFs gerados (guias do integrante e do líder): ficam fora do git
+docs/*.pdf
