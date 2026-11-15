@@ -1,4 +1,4 @@
-// Leitor de cifras: tamanho da letra, mostrar/ocultar acordes, manter a tela acesa e troca de tom.
+// Leitor de cifras: tamanho da letra, acordes (com letra / só letra / só acordes), tela acesa e troca de tom.
 (function () {
     const ler = (chave, padrao) => {
         try { const v = localStorage.getItem(chave); return v === null ? padrao : v; } catch (e) { return padrao; }
@@ -10,7 +10,16 @@
     // 'max' = sempre usar esse limite (padrão); um número = tamanho escolhido pela pessoa com A−.
     const ESCALA_MIN = 0.55, ESCALA_MAX = 1.8, PASSO = 0.1;
     let preferencia = ler('cifra-tamanho', 'max');
-    let acordes = ler('cifra-acordes', '1') === '1';
+    // Botão de acordes com 3 estados: letra com acordes -> só a letra -> só os acordes -> ...
+    // (guardado como '1', '0' e '2'; os dois primeiros já existiam)
+    const MODOS = {
+        '1': { classe: '', icone: 'bi-music-note-beamed', rotulo: 'Acordes', titulo: 'Letra com acordes (toque para mostrar só a letra)', ativo: true },
+        '0': { classe: 'sem-acordes', icone: 'bi-fonts', rotulo: 'Só letra', titulo: 'Só a letra (toque para mostrar só os acordes)', ativo: false },
+        '2': { classe: 'so-acordes', icone: 'bi-music-note-list', rotulo: 'Só acordes', titulo: 'Só os acordes (toque para voltar à letra com acordes)', ativo: true },
+    };
+    const PROXIMO_MODO = { '1': '0', '0': '2', '2': '1' };
+    let modoAcordes = ler('cifra-acordes', '1');
+    if (!MODOS[modoAcordes]) modoAcordes = '1';
 
     function limiteSemQuebra(leitor) {
         leitor.style.setProperty('--cifra-escala', 1);
@@ -33,10 +42,13 @@
 
     function aplicar() {
         document.querySelectorAll('.cifra-leitor').forEach(el => {
-            el.classList.toggle('sem-acordes', !acordes);
+            el.classList.toggle('sem-acordes', modoAcordes === '0');
+            el.classList.toggle('so-acordes', modoAcordes === '2');
             if (!el.clientWidth) return;  // escondido (ex.: aba de pré-visualização fechada)
             const limite = limiteSemQuebra(el);
-            const desejada = preferencia === 'max' ? limite : parseFloat(preferencia);
+            // Só acordes: as linhas ficam curtas e o tamanho automático iria ao máximo; segura em 1,3x
+            const automatico = modoAcordes === '2' ? Math.min(limite, 1.3) : limite;
+            const desejada = preferencia === 'max' ? automatico : parseFloat(preferencia);
             el.dataset.limite = limite;
             el.style.setProperty('--cifra-escala', Math.max(ESCALA_MIN, Math.min(desejada, limite)));
         });
@@ -46,7 +58,16 @@
             b.disabled = !!noLimite;
             b.title = noLimite ? 'Tamanho máximo sem quebrar as linhas' : 'Aumentar letra';
         });
-        document.querySelectorAll('[data-cifra="acordes"]').forEach(b => b.classList.toggle('ativo', acordes));
+        const modo = MODOS[modoAcordes];
+        document.querySelectorAll('[data-cifra="acordes"]').forEach(b => {
+            b.classList.toggle('ativo', modo.ativo);
+            b.title = modo.titulo;
+            b.setAttribute('aria-label', modo.titulo);
+            const icone = b.querySelector('i');
+            if (icone) icone.className = 'bi ' + modo.icone;
+            const rotulo = b.querySelector('span');  // só o botão da barra tem texto (no celular fica escondido)
+            if (rotulo) rotulo.textContent = modo.rotulo;
+        });
     }
 
     function mudarTamanho(passo) {
@@ -221,12 +242,12 @@
         }
         if (acao === 'menor') mudarTamanho(-PASSO);
         if (acao === 'maior') mudarTamanho(PASSO);
-        if (acao === 'acordes') acordes = !acordes;
+        if (acao === 'acordes') modoAcordes = PROXIMO_MODO[modoAcordes];
         if (acao === 'tela') {
             alternarTela(botao).then(() => gravar('cifra-tela', telaAcesa() ? '1' : '0'));
             return;
         }
-        gravar('cifra-acordes', acordes ? '1' : '0');
+        gravar('cifra-acordes', modoAcordes);
         aplicar();
     });
 

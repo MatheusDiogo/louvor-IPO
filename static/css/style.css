@@ -629,6 +629,17 @@ button, input, select, textarea {
 }
 
 /* Sem acordes: ficam só a letra, os comentários sem acorde e o refrão */
+/* Só acordes: some a letra; os acordes de cada linha ficam lado a lado (anotações e refrão continuam) */
+.cifra-leitor.so-acordes .cp-lyrics-only,
+.cifra-leitor.so-acordes .cp-chunk:not(.cp-chunk-acorde):not(.cp-chunk-comentario),
+.cifra-leitor.so-acordes .cp-chunk-acorde .cp-lyric {
+    display: none;
+}
+
+.cifra-leitor.so-acordes .cp-line .cp-chunk { margin-right: 0.9em; }
+.cifra-leitor.so-acordes .cp-chunk-comentario .cp-chord:empty { display: none; }
+.cifra-leitor.so-acordes .cp-line { margin-bottom: 0.35em; }
+
 .cifra-leitor.sem-acordes .cp-chord,
 .cifra-leitor.sem-acordes .cp-chords-only,
 .cifra-leitor.sem-acordes .cp-com-acorde {

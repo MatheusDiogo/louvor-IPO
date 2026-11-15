@@ -328,15 +328,16 @@ def renderizar_html(texto, tom_original='', tom_destino=''):
                     comentario = comentario_html(letra)
                     # (o espaço embaixo deixa o bloco da mesma altura dos acordes, que também têm um espaço)
                     topo, baixo = (comentario, ' ') if so_acordes else ('', comentario + ' ')
-                    html.append(f'<span class="cp-chunk"><span class="cp-chord">{topo}</span>'
+                    html.append(f'<span class="cp-chunk cp-chunk-comentario"><span class="cp-chord">{topo}</span>'
                                 f'<span class="cp-lyric">{baixo}</span></span>')
                     continue
                 acorde_t = transpor_texto(acorde, semitons, bemol if transpor else False) if acorde else ''
                 # Cada palavra vira um bloco: no celular a linha quebra entre palavras
                 palavras = re.findall(r'\S+\s*|\s+', letra) or ['']
                 for indice, palavra in enumerate(palavras):
+                    # cp-chunk-acorde: bloco que começa com acorde (é o que fica no modo "só acordes")
                     html.append(
-                        '<span class="cp-chunk">'
+                        f'<span class="cp-chunk{" cp-chunk-acorde" if acorde_t and indice == 0 else ""}">'
                         f'<span class="cp-chord">{escape(acorde_t) if indice == 0 else ""}</span>'
                         f'<span class="cp-lyric">{escape(palavra)}</span>'
                         '</span>'
