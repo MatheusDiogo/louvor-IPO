@@ -7,6 +7,7 @@ urlpatterns = [
 
     # CRUD da escala
     path('criar/', views.escala_criar, name='escala_criar'),
+    path('gerar-domingos/', views.escala_gerar_domingos, name='escala_gerar_domingos'),
     path('<int:pk>/editar/', views.escala_editar, name='escala_editar'),
     path('<int:pk>/excluir/', views.escala_excluir, name='escala_excluir'),
 

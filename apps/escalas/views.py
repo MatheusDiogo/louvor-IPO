@@ -7,7 +7,9 @@ from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from collections import defaultdict
 
-from django.db.models import Count, Max
+from datetime import date, timedelta
+
+from django.db.models import Count, Max, Q
 from .models import Escala, EscalaMusica, EscalaIntegrante
 from apps.musicas.cifra import (
     TONS_MAIORES, TONS_MENORES, letra_para_busca, normalizar_tom, opcoes_de_tom, renderizar_html, tom_base,
@@ -19,19 +21,36 @@ from apps.core.decorators import requer_lider
 from apps.notificacoes import avisos
 from apps.core.utils import chave_alfabetica, subtrair_meses
 
+def cultos_com_equipe(cultos):
+    """Só os cultos que já têm escala de integrantes (alguém escalado ou um ministrante)."""
+    return cultos.filter(Q(integrantes__isnull=False) | Q(ministrante__isnull=False)).distinct()
+
+
+def domingos_restantes_do_ano(hoje=None):
+    """Domingos de hoje (inclusive) até 31/12 do ano corrente."""
+    hoje = hoje or timezone.localdate()
+    dia = hoje + timedelta(days=(6 - hoje.weekday()) % 7)
+    domingos = []
+    while dia.year == hoje.year:
+        domingos.append(dia)
+        dia += timedelta(days=7)
+    return domingos
+
+
 def urls_proximos_cultos(quantidade=4):
     """Páginas dos próximos cultos para o celular guardar e abrir mesmo sem internet."""
     urls = []
-    for escala in Escala.objects.filter(data__gte=timezone.localdate()).order_by('data')[:quantidade]:
+    for escala in cultos_com_equipe(Escala.objects.filter(data__gte=timezone.localdate())).order_by('data')[:quantidade]:
         urls += [f'/escalas/{escala.pk}/cifras/', f'/escalas/{escala.pk}/visualizar/']
     return urls
 
 
 @login_required
 def escala_list(request):
-    """Lista apenas escalas futuras (data >= hoje)."""
+    """Lista os cultos futuros (data >= hoje) que já têm escala de integrantes."""
     hoje = timezone.localdate()
-    escalas = list(Escala.objects.filter(data__gte=hoje).order_by('data').annotate(total_musicas=Count('itens')))
+    escalas = list(cultos_com_equipe(Escala.objects.filter(data__gte=hoje)).order_by('data')
+                   .annotate(total_musicas=Count('itens', distinct=True)))
 
     # Funções do usuário logado em cada culto (para o aviso "Você está escalado")
     minhas = defaultdict(list)
@@ -41,8 +60,15 @@ def escala_list(request):
         escala.minhas_funcoes = minhas.get(escala.id, [])
         escala.eu_ministro = escala.ministrante_id == request.user.id
 
+    gerar = None
+    if request.user.is_lider:
+        domingos = domingos_restantes_do_ano(hoje)
+        existentes = set(Escala.objects.filter(data__in=domingos).values_list('data', flat=True))
+        novos = [d for d in domingos if d not in existentes]
+        gerar = {'novos': novos, 'existentes': len(existentes), 'ano': hoje.year}
+
     return render(request, 'escalas/escala_list.html', {
-        'escalas': escalas, 'hoje': hoje,
+        'escalas': escalas, 'hoje': hoje, 'gerar': gerar,
         'total_meus': sum(1 for e in escalas if e.minhas_funcoes or e.eu_ministro), 'urls_offline': ['/escalas/', '/musicas/'] + urls_proximos_cultos(),
     })
 
@@ -70,6 +96,27 @@ def escala_criar(request):
         messages.success(request, f'Culto de {escala.data.strftime("%d/%m/%Y")} criado com sucesso!')
         return redirect('escala_detalhe', pk=escala.pk)
 
+    return redirect('escala_list')
+
+
+@login_required
+@requer_lider
+@require_POST
+def escala_gerar_domingos(request):
+    """Cria um culto em cada domingo daqui até o fim do ano. Domingos que já têm culto ficam como
+    estão (escala e músicas intactas), então dá para usar quantas vezes quiser."""
+    domingos = domingos_restantes_do_ano()
+    existentes = set(Escala.objects.filter(data__in=domingos).values_list('data', flat=True))
+    novos = [Escala(data=d) for d in domingos if d not in existentes]
+    Escala.objects.bulk_create(novos, ignore_conflicts=True)
+    if novos:
+        if len(novos) == 1:
+            texto = f'1 culto criado ({novos[0].data:%d/%m}).'
+        else:
+            texto = f'{len(novos)} cultos criados (de {novos[0].data:%d/%m} a {novos[-1].data:%d/%m}).'
+        messages.success(request, texto + ' Eles aparecem aqui quando tiverem escala de integrantes.')
+    else:
+        messages.info(request, 'Todos os domingos até o fim do ano já têm culto.')
     return redirect('escala_list')
 
 

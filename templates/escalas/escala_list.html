@@ -10,9 +10,14 @@
             <p class="page-subtitle">Próximos cultos e as músicas de cada um.</p>
         </div>
         {% if user.is_lider %}
-        <button type="button" class="btn-login btn-acao" onclick="novaEscala()">
-            <i class="bi bi-plus-lg me-2"></i>Novo Culto
-        </button>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-success rounded-pill px-3 flex-grow-1" onclick="abrirModal('modalGerarDomingos')">
+                <i class="bi bi-calendar-range me-2"></i>Gerar domingos do ano
+            </button>
+            <button type="button" class="btn-login btn-acao" onclick="novaEscala()">
+                <i class="bi bi-plus-lg me-2"></i>Novo Culto
+            </button>
+        </div>
         {% endif %}
     </div>
 
@@ -86,13 +91,48 @@
         {% empty %}
         <div class="table-card text-center py-5 text-muted">
             <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-50"></i>
-            Nenhum culto futuro cadastrado.
+            Nenhum culto com escala de integrantes.{% if user.is_lider %}<br><small>Os cultos aparecem aqui depois que a escala do mês é montada em <a href="{% url 'escala_equipe' %}">Escalas</a>.</small>{% endif %}
         </div>
         {% endfor %}
     </div>
 </div>
 
 {% if user.is_lider %}
+<!-- Modal: Gerar os domingos que faltam no ano -->
+<div class="modal fade" id="modalGerarDomingos" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'escala_gerar_domingos' %}">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-green);">
+                        <i class="bi bi-calendar-range me-2"></i>Domingos de {{ gerar.ano }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4">
+                    {% with novos=gerar.novos %}
+                    {% if novos %}
+                    <p class="mb-2">Serão criados <strong>{{ novos|length }} culto{{ novos|length|pluralize }}</strong>
+                        ({% if novos|length > 1 %}de {{ novos.0|date:"d/m" }} a {{ novos|last|date:"d/m" }}{% else %}{{ novos.0|date:"d/m" }}{% endif %}).
+                        <span class="text-muted">{{ gerar.existentes }} já existe{{ gerar.existentes|pluralize:"m" }}.</span></p>
+                    <p class="small text-muted mb-0">Só domingos de hoje até o fim do ano. Os cultos que já existem não mudam
+                        (escala e músicas continuam como estão). Na lista, cada culto aparece depois de ter escala de integrantes.</p>
+                    {% else %}
+                    <p class="mb-0">Todos os domingos até o fim de {{ gerar.ano }} já têm culto
+                        <span class="text-muted">({{ gerar.existentes }} no total)</span>.</p>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    {% if gerar.novos %}<button type="submit" class="btn-login btn-acao">Criar cultos</button>{% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Nova / Editar Culto -->
 <div class="modal fade" id="modalEscala" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
