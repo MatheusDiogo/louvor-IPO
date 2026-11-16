@@ -18,7 +18,8 @@ class Escala(models.Model):
         related_name="cultos_ministrados"
     )
 
-    # Responsável musical do culto (marcado na escala): escolhe as músicas e os tons deste culto
+    # Responsável musical do culto (marcado na escala): o líder escolhe as músicas; se a equipe tiver
+    # dificuldade, o responsável pode ajustar os tons e trocar músicas deste culto
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

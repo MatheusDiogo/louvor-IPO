@@ -229,7 +229,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body px-4 pt-0">
-                <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante e em <i class="bi bi-sliders"></i> para o responsável musical (escolhe as músicas e os tons do culto).</p>
+                <p class="small text-muted mb-2">Marque quem vai participar. Toque na <i class="bi bi-star"></i> para definir o ministrante e em <i class="bi bi-sliders"></i> para o responsável musical (pode ajustar tons e músicas se a equipe tiver dificuldade).</p>
                 <div class="list-group" id="celulaLista"></div>
             </div>
             <div class="modal-footer border-0 pb-4 px-4">
@@ -440,7 +440,7 @@
             const tonsLabel = document.createElement('label');
             tonsLabel.className = 'btn btn-sm btn-outline-primary rounded-pill flex-shrink-0';
             tonsLabel.htmlFor = tons.id;
-            tonsLabel.title = 'Responsável musical (escolhe as músicas e os tons)';
+            tonsLabel.title = 'Responsável musical (ajusta tons e músicas do culto)';
             tonsLabel.innerHTML = '<i class="bi bi-sliders"></i>';
 
             estrela.addEventListener('change', () => {

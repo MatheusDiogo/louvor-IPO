@@ -154,7 +154,7 @@ def escala_alterada(escalas, antes, depois, autor=None):
                 mudancas.setdefault(ministrante_antes, []).append('não vai mais ministrar')
         if responsavel_depois != responsavel_antes:
             if responsavel_depois:
-                mudancas.setdefault(responsavel_depois, []).append('é o responsável musical (escolhe as músicas e os tons)')
+                mudancas.setdefault(responsavel_depois, []).append('é o responsável musical (pode ajustar tons e músicas)')
             if responsavel_antes and responsavel_antes in equipe_depois:
                 mudancas.setdefault(responsavel_antes, []).append('não é mais o responsável musical')
         for uid, partes in mudancas.items():
