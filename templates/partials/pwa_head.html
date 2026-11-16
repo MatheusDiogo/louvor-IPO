@@ -1,4 +1,12 @@
 {% load static %}
+<script>
+    /* Tema escuro: escolha guardada neste aparelho (botão de lua no topo) */
+    (function () {
+        var tema = null;
+        try { tema = localStorage.getItem('louvor-tema'); } catch (e) {}
+        if (tema === 'escuro') document.documentElement.setAttribute('data-bs-theme', 'dark');
+    })();
+</script>
 <meta name="theme-color" content="#166534">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">

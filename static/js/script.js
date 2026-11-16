@@ -35,6 +35,29 @@ function editarInstrumento(btn) {
     abrirModal("modalInstrumento");
 }
 
+/* ---------- Tema claro / escuro (fica guardado neste aparelho) ---------- */
+
+(function () {
+    const botao = document.getElementById('botaoTema');
+    if (!botao) return;
+    const raiz = document.documentElement;
+    const atualizar = () => {
+        const escuro = raiz.getAttribute('data-bs-theme') === 'dark';
+        botao.innerHTML = escuro ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+        botao.title = escuro ? 'Tema claro' : 'Tema escuro';
+        botao.setAttribute('aria-label', botao.title);
+        const cor = document.querySelector('meta[name="theme-color"]');
+        if (cor) cor.content = escuro ? '#0f1511' : '#166534';
+    };
+    botao.addEventListener('click', () => {
+        const escuro = raiz.getAttribute('data-bs-theme') !== 'dark';
+        if (escuro) raiz.setAttribute('data-bs-theme', 'dark'); else raiz.removeAttribute('data-bs-theme');
+        try { localStorage.setItem('louvor-tema', escuro ? 'escuro' : 'claro'); } catch (e) {}
+        atualizar();
+    });
+    atualizar();
+})();
+
 /* ---------- Integrantes ---------- */
 
 function novoIntegrante() {

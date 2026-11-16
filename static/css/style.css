@@ -1368,3 +1368,150 @@ html[data-cifra-cores] .caixa-cifra .acorde-svg .acorde-solta { stroke: var(--ci
 
 /* Integrantes desativados (tela de Integrantes) */
 .integrante-inativo { opacity: 0.6; background: #f8faf9; }
+
+
+/* ================================================================ Tema escuro do site
+   Botão de lua no topo (html[data-bs-theme="dark"]). O Bootstrap cuida dos componentes; aqui ficam
+   as cores próprias do site. A imagem exportada da escala continua clara. */
+[data-bs-theme="dark"] {
+    --primary-green: #16a34a;
+    --primary-hover: #15803d;
+    --bg-light: #0f1511;
+    --text-dark: #e3ece5;
+    --border-color: #24372a;
+    --fundo-cartao: #172019;
+    --fundo-campo: #111914;
+    --fundo-suave: #1c2820;
+    --texto-suave: #9fb0a5;
+    --bs-body-bg: #0f1511;
+    --bs-body-color: #e3ece5;
+    --bs-secondary-color: #9fb0a5;
+    --bs-tertiary-bg: #1c2820;
+    --bs-border-color: #2b3d31;
+    --bs-emphasis-color: #f1f5f2;
+    color-scheme: dark;
+}
+
+/* utilitários do Bootstrap que continuam claros no modo escuro */
+[data-bs-theme="dark"] .bg-light,
+[data-bs-theme="dark"] .bg-white { background-color: var(--fundo-suave) !important; }
+[data-bs-theme="dark"] .text-dark { color: var(--text-dark) !important; }
+[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .text-secondary { color: var(--texto-suave) !important; }
+[data-bs-theme="dark"] .btn-light {
+    --bs-btn-bg: var(--fundo-suave); --bs-btn-border-color: var(--border-color); --bs-btn-color: var(--text-dark);
+    --bs-btn-hover-bg: #24332a; --bs-btn-hover-border-color: #2f4436; --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: #24332a; --bs-btn-active-color: #fff;
+}
+[data-bs-theme="dark"] .border { border-color: var(--border-color) !important; }
+[data-bs-theme="dark"] .text-success { color: #4ade80 !important; }
+[data-bs-theme="dark"] .btn-outline-success {
+    --bs-btn-color: #4ade80; --bs-btn-border-color: #2f8f52;
+    --bs-btn-hover-bg: #16a34a; --bs-btn-hover-border-color: #16a34a; --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: #15803d; --bs-btn-active-border-color: #15803d;
+}
+[data-bs-theme="dark"] .breadcrumb-item.active { color: var(--texto-suave); }
+[data-bs-theme="dark"] .page-title,
+[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2 { color: #4ade80; }
+[data-bs-theme="dark"] [style*="color: var(--primary-green)"] { color: #4ade80 !important; }
+
+/* superfícies */
+[data-bs-theme="dark"] .bg-verde,
+[data-bs-theme="dark"] .login-card,
+[data-bs-theme="dark"] .btn-secundario,
+[data-bs-theme="dark"] .dashboard-card,
+[data-bs-theme="dark"] .table-card,
+[data-bs-theme="dark"] .grade-escala .col-dia,
+[data-bs-theme="dark"] .em-foco,
+[data-bs-theme="dark"] .acorde-admin-cartao,
+[data-bs-theme="dark"] .cal-dia,
+[data-bs-theme="dark"] .modal-content { background: var(--fundo-cartao) !important; color: var(--text-dark); }
+[data-bs-theme="dark"] .bg-verde { border-bottom-color: var(--border-color); }
+[data-bs-theme="dark"] .list-group-item { background-color: transparent; color: var(--text-dark); border-color: var(--border-color); }
+[data-bs-theme="dark"] .card-icon { background: #1d3325; }
+[data-bs-theme="dark"] .dashboard-card:hover { border-color: #2f6b45 !important; }
+[data-bs-theme="dark"] .input-group-modern { background: var(--fundo-campo); border-color: var(--border-color); }
+[data-bs-theme="dark"] .input-group-modern:focus-within { background: var(--fundo-campo); border-color: #2f8f52; }
+[data-bs-theme="dark"] .input-group-modern input,
+[data-bs-theme="dark"] .input-group-modern select { color: var(--text-dark); background: transparent; }
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select { background-color: var(--fundo-campo); border-color: var(--border-color); color: var(--text-dark); }
+[data-bs-theme="dark"] .chips label { border-color: #3a4d40; }
+[data-bs-theme="dark"] .table-modern thead,
+[data-bs-theme="dark"] .grade-escala th,
+[data-bs-theme="dark"] .grade-escala thead .col-dia,
+[data-bs-theme="dark"] .cartao-notificacoes.notif-ativa,
+[data-bs-theme="dark"] .acorde-admin-cartao.inativo,
+[data-bs-theme="dark"] .cal-dia:disabled,
+[data-bs-theme="dark"] .previa-notificacao,
+[data-bs-theme="dark"] .integrante-inativo { background: var(--fundo-suave) !important; }
+[data-bs-theme="dark"] .grade-escala th,
+[data-bs-theme="dark"] .page-subtitle,
+[data-bs-theme="dark"] .login-header p,
+[data-bs-theme="dark"] .login-link,
+[data-bs-theme="dark"] .campo-rotulo,
+[data-bs-theme="dark"] .toggle-password,
+[data-bs-theme="dark"] .cp-label,
+[data-bs-theme="dark"] .cp-comment,
+[data-bs-theme="dark"] .cp-comment-inline,
+[data-bs-theme="dark"] .acordes-alternar,
+[data-bs-theme="dark"] .acorde-variar,
+[data-bs-theme="dark"] .acorde-vazio,
+[data-bs-theme="dark"] .editor-corda,
+[data-bs-theme="dark"] .tema-nome,
+[data-bs-theme="dark"] .cor-campo,
+[data-bs-theme="dark"] .cal-semana,
+[data-bs-theme="dark"] .cal-dia:disabled { color: var(--texto-suave); }
+[data-bs-theme="dark"] .login-divisor::before,
+[data-bs-theme="dark"] .login-divisor::after,
+[data-bs-theme="dark"] .foco-separador { border-color: var(--border-color); background: var(--border-color); }
+[data-bs-theme="dark"] .celula-mobile,
+[data-bs-theme="dark"] .acordes-bloco,
+[data-bs-theme="dark"] .acorde-admin-cartao,
+[data-bs-theme="dark"] .cal-dia,
+[data-bs-theme="dark"] .tema-amostra,
+[data-bs-theme="dark"] .cores-previa,
+[data-bs-theme="dark"] .previa-notificacao { border-color: var(--border-color); }
+
+/* realces verdes, amarelos e vermelhos (versões escuras) */
+[data-bs-theme="dark"] .celula-escala:hover,
+[data-bs-theme="dark"] .celula-escala:focus-visible,
+[data-bs-theme="dark"] .acorde-botao:hover,
+[data-bs-theme="dark"] .acorde-botao:focus-visible,
+[data-bs-theme="dark"] .cal-dia:not(:disabled):hover,
+[data-bs-theme="dark"] .cal-dia.tem-culto,
+[data-bs-theme="dark"] #listaOrdem .item-movido { background: #18301f !important; border-color: #2f6b45; }
+[data-bs-theme="dark"] .cp-section.cp-chorus { border-left-color: #2f8f52; }
+[data-bs-theme="dark"] .barra-leitor { background: rgba(15, 21, 17, 0.95); }
+[data-bs-theme="dark"] .foco-controles { background: rgba(23, 32, 25, 0.96); border-color: var(--border-color); }
+[data-bs-theme="dark"] .aviso-offline,
+[data-bs-theme="dark"] .barra-salvar { background: #3a2f0b; color: #fde68a; border-color: #5c4a12; }
+[data-bs-theme="dark"] .celula-escala.celula-alterada { background: #3a330b; }
+[data-bs-theme="dark"] .login-error,
+[data-bs-theme="dark"] #celulaLista .linha-indisponivel { background: #3a1717; color: #fca5a5; }
+[data-bs-theme="dark"] .campo-erro { color: #fca5a5; }
+[data-bs-theme="dark"] .cal-dia.indisponivel { background: #3a1717; border-color: #7f1d1d; color: #fca5a5; }
+[data-bs-theme="dark"] .acorde-aviso { color: #fbbf24; }
+
+/* desenhos de violão (sem cores próprias da cifra) e editor de acordes */
+[data-bs-theme="dark"] .acorde-svg .acorde-pestana-fixa { stroke: #e3ece5; }
+[data-bs-theme="dark"] .acorde-svg .acorde-dedo { fill: #e3ece5; }
+[data-bs-theme="dark"] .acorde-botao.gerado .acorde-svg .acorde-dedo { fill: #4ade80; }
+[data-bs-theme="dark"] .acorde-svg .acorde-dedo-num { fill: #0f1511; }
+[data-bs-theme="dark"] .acorde-svg .acorde-traste,
+[data-bs-theme="dark"] .acorde-svg .acorde-corda { stroke: #5f6f65; }
+[data-bs-theme="dark"] .acorde-svg .acorde-casa-inicial,
+[data-bs-theme="dark"] .acorde-svg .acorde-marca { fill: var(--texto-suave); }
+[data-bs-theme="dark"] .acorde-svg .acorde-solta { stroke: var(--texto-suave); }
+[data-bs-theme="dark"] .editor-casa.primeira { border-top-color: #e3ece5; }
+
+/* a imagem exportada da escala continua no padrão claro da planilha */
+[data-bs-theme="dark"] .planilha { color: #000; }
+
+/* cores escritas direto nas páginas (logo "IPO", cabeçalho das datas na escala do celular, textos do login) */
+[data-bs-theme="dark"] [style*="color: #1a2e1a"] { color: var(--text-dark) !important; }
+[data-bs-theme="dark"] [style*="color: #444"],
+[data-bs-theme="dark"] [style*="color: #555"],
+[data-bs-theme="dark"] [style*="color: #6b7280"] { color: var(--texto-suave) !important; }
+[data-bs-theme="dark"] [style*="background: #f8faf9"] { background: var(--fundo-suave) !important; }
+[data-bs-theme="dark"] [style*="background: #fffbeb"] { background: #2a2410 !important; border-color: #5c4a12 !important; }
