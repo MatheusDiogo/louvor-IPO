@@ -60,6 +60,7 @@ def escala_list(request):
         escala.minhas_funcoes = minhas.get(escala.id, [])
         escala.eu_ministro = escala.ministrante_id == request.user.id
         escala.eu_responsavel = escala.responsavel_id == request.user.id
+        escala.editar_musicas = pode_editar_musicas_do_culto(request.user, escala)
 
     gerar = None
     if request.user.is_lider:
@@ -177,12 +178,18 @@ def _preparar_tons(itens):
         item.opcoes_tom = opcoes if not item.tom or item.tom in opcoes else [item.tom] + opcoes
 
 
-def pode_mudar_tom(usuario, escala):
-    """Líder (em qualquer culto) ou o responsável musical do culto (só até o dia do culto)."""
+def pode_editar_musicas_do_culto(usuario, escala):
+    """Escolher as músicas e os tons do culto: líder (em qualquer culto) ou o responsável musical
+    daquele culto (até o dia do culto, inclusive)."""
     if usuario.is_lider:
         return True
     return (escala.responsavel_id is not None and escala.responsavel_id == usuario.id
             and escala.data >= timezone.localdate())
+
+
+def _sem_permissao(request, escala_id):
+    messages.error(request, 'Só o responsável musical do culto (ou um líder) pode mudar as músicas e os tons.')
+    return redirect('escala_visualizar', pk=escala_id)
 
 
 def _tom_valido(valor, musica):
@@ -191,10 +198,11 @@ def _tom_valido(valor, musica):
 
 
 @login_required
-@requer_lider
 def escala_detalhe(request, pk):
-    """Gerenciar as músicas do culto (e o tom de cada uma)."""
+    """Gerenciar as músicas do culto (e o tom de cada uma): líder ou responsável musical do culto."""
     escala = get_object_or_404(Escala, pk=pk)
+    if not pode_editar_musicas_do_culto(request.user, escala):
+        return _sem_permissao(request, pk)
     itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
     _preparar_tons(itens)
 
@@ -226,11 +234,12 @@ def escala_detalhe(request, pk):
 
 
 @login_required
-@requer_lider
 @require_POST
 def escala_musica_adicionar(request, pk):
     """Adiciona uma música ao culto, no tom escolhido."""
     escala = get_object_or_404(Escala, pk=pk)
+    if not pode_editar_musicas_do_culto(request.user, escala):
+        return _sem_permissao(request, pk)
     musica = get_object_or_404(Musica, pk=request.POST.get('musica_id') or 0)
 
     if EscalaMusica.objects.filter(escala=escala, musica=musica).exists():
@@ -241,7 +250,7 @@ def escala_musica_adicionar(request, pk):
                                            tom=_tom_valido(request.POST.get('tom', ''), musica))
         messages.success(request, f'"{musica.nome}" adicionada!')
         total = escala.itens.count()
-        if avisos.repertorio_adicionado(escala, item, total) and total == avisos.MUSICAS_PARA_AVISAR:
+        if avisos.repertorio_adicionado(escala, item, total, autor=request.user) and total == avisos.MUSICAS_PARA_AVISAR:
             messages.info(request, f'{total} músicas no culto: a equipe escalada foi avisada por notificação.')
     return redirect('escala_detalhe', pk=pk)
 
@@ -251,31 +260,28 @@ def escala_musica_adicionar(request, pk):
 def escala_musica_tom(request, item_pk):
     """Troca o tom de uma música no culto (líder ou responsável musical do culto)."""
     item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
-    if not pode_mudar_tom(request.user, item.escala):
-        messages.error(request, 'Só o responsável musical do culto (ou um líder) pode mudar os tons.')
-        return redirect('escala_visualizar', pk=item.escala_id)
+    if not pode_editar_musicas_do_culto(request.user, item.escala):
+        return _sem_permissao(request, item.escala_id)
     tom_antigo = item.tom
     item.tom = _tom_valido(request.POST.get('tom', ''), item.musica)
     item.save(update_fields=['tom'])
     avisos.tom_alterado(item.escala, item, tom_antigo, autor=request.user)
     messages.success(request, f'"{item.musica.nome}" agora em {item.tom or "tom original"}.')
-    proximo = request.POST.get('next', '')
-    if url_has_allowed_host_and_scheme(proximo, allowed_hosts={request.get_host()}):
-        return redirect(proximo)
-    return redirect('escala_detalhe' if request.user.is_lider else 'escala_visualizar', pk=item.escala_id)
+    return redirect('escala_detalhe', pk=item.escala_id)
 
 
 @login_required
-@requer_lider
 @require_POST
 def escala_musica_excluir(request, item_pk):
     """Remove uma música do culto."""
     item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
+    if not pode_editar_musicas_do_culto(request.user, item.escala):
+        return _sem_permissao(request, item.escala_id)
     escala_pk = item.escala.pk
     total_antes = item.escala.itens.count()
     nome = item.musica.nome
     item.delete()
-    avisos.repertorio_removido(item.escala, nome, total_antes)
+    avisos.repertorio_removido(item.escala, nome, total_antes, autor=request.user)
     messages.success(request, 'Música removida do culto.')
     return redirect('escala_detalhe', pk=escala_pk)
 
@@ -324,10 +330,6 @@ def escala_visualizar(request, pk):
     """Visualização do culto (somente leitura): equipe e músicas."""
     escala = get_object_or_404(Escala, pk=pk)
     itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
-    # O responsável musical troca os tons aqui mesmo (o líder usa "Editar músicas")
-    mudar_tom = not request.user.is_lider and pode_mudar_tom(request.user, escala)
-    if mudar_tom:
-        _preparar_tons(itens)
     equipe = _equipe(escala)
     minhas_funcoes = [inst.nome for inst, usuarios in equipe.items() if request.user in usuarios]
 
@@ -337,7 +339,7 @@ def escala_visualizar(request, pk):
         'equipe': list(equipe.items()),
         'minhas_funcoes': minhas_funcoes,
         'pode_ordenar': pode_ordenar(request.user, escala),
-        'mudar_tom': mudar_tom,
+        'editar_musicas': pode_editar_musicas_do_culto(request.user, escala),
     })
 
 

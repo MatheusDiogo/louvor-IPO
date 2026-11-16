@@ -34,7 +34,12 @@ def _url_cifras(escala):
 
 # ---------------------------------------------------------------- 3. repertório do culto
 
-def repertorio_adicionado(escala, item, total):
+def _sem_autor(equipe, autor):
+    autor_id = getattr(autor, 'pk', autor)
+    return [u for u in equipe if u.pk != autor_id]
+
+
+def repertorio_adicionado(escala, item, total, autor=None):
     """Chamado depois de adicionar uma música ao culto (`total` = quantas músicas o culto tem agora)."""
     if not _culto_futuro(escala) or total < MUSICAS_PARA_AVISAR:
         return 0
@@ -44,14 +49,15 @@ def repertorio_adicionado(escala, item, total):
     else:
         titulo = f'Repertório do culto de {escala.data:%d/%m} alterado'
         corpo = f'Música adicionada: {item.musica.nome}' + (f' (tom {item.tom})' if item.tom else '')
-    return servico.enviar(_equipe(escala), titulo, corpo, url=_url_cifras(escala), tag=f'culto-{escala.pk}-musicas')
+    return servico.enviar(_sem_autor(_equipe(escala), autor), titulo, corpo, url=_url_cifras(escala),
+                          tag=f'culto-{escala.pk}-musicas')
 
 
-def repertorio_removido(escala, nome_musica, total_antes):
+def repertorio_removido(escala, nome_musica, total_antes, autor=None):
     if not _culto_futuro(escala) or total_antes < MUSICAS_PARA_AVISAR:
         return 0
     return servico.enviar(
-        _equipe(escala), f'Repertório do culto de {escala.data:%d/%m} alterado',
+        _sem_autor(_equipe(escala), autor), f'Repertório do culto de {escala.data:%d/%m} alterado',
         f'Música removida: {nome_musica}', url=_url_cifras(escala), tag=f'culto-{escala.pk}-musicas')
 
 
@@ -59,9 +65,8 @@ def tom_alterado(escala, item, tom_antigo, autor=None):
     """Troca de tom: avisa só quem toca instrumento (o vocal não precisa). Quem trocou não é avisado."""
     if not _culto_futuro(escala) or escala.itens.count() < MUSICAS_PARA_AVISAR or item.tom == tom_antigo:
         return 0
-    autor_id = getattr(autor, 'pk', autor)
     return servico.enviar(
-        [u for u in _equipe(escala, sem_vocal=True) if u.pk != autor_id], f'Tom alterado no culto de {escala.data:%d/%m}',
+        _sem_autor(_equipe(escala, sem_vocal=True), autor), f'Tom alterado no culto de {escala.data:%d/%m}',
         f'{item.musica.nome}: agora em {item.tom or "tom original"}' + (f' (antes {tom_antigo})' if tom_antigo else ''),
         url=_url_cifras(escala), tag=f'culto-{escala.pk}-tom-{item.pk}')
 
@@ -149,7 +154,7 @@ def escala_alterada(escalas, antes, depois, autor=None):
                 mudancas.setdefault(ministrante_antes, []).append('não vai mais ministrar')
         if responsavel_depois != responsavel_antes:
             if responsavel_depois:
-                mudancas.setdefault(responsavel_depois, []).append('é o responsável musical (pode mudar os tons)')
+                mudancas.setdefault(responsavel_depois, []).append('é o responsável musical (escolhe as músicas e os tons)')
             if responsavel_antes and responsavel_antes in equipe_depois:
                 mudancas.setdefault(responsavel_antes, []).append('não é mais o responsável musical')
         for uid, partes in mudancas.items():
