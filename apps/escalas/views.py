@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -267,6 +268,9 @@ def escala_musica_tom(request, item_pk):
     item.save(update_fields=['tom'])
     avisos.tom_alterado(item.escala, item, tom_antigo, autor=request.user)
     messages.success(request, f'"{item.musica.nome}" agora em {item.tom or "tom original"}.')
+    # Trocado na tela do culto: volta para ela (senão, para "Editar músicas")
+    if request.POST.get('voltar') == 'culto':
+        return redirect(f"{reverse('escala_visualizar', args=[item.escala_id])}#musica-{item.pk}")
     return redirect('escala_detalhe', pk=item.escala_id)
 
 
@@ -330,6 +334,9 @@ def escala_visualizar(request, pk):
     """Visualização do culto (somente leitura): equipe e músicas."""
     escala = get_object_or_404(Escala, pk=pk)
     itens = list(escala.itens.select_related('musica').order_by('ordem', 'id'))
+    editar_musicas = pode_editar_musicas_do_culto(request.user, escala)
+    if editar_musicas:
+        _preparar_tons(itens)  # o tom de cada música vira um seletor
     equipe = _equipe(escala)
     minhas_funcoes = [inst.nome for inst, usuarios in equipe.items() if request.user in usuarios]
 
@@ -339,7 +346,7 @@ def escala_visualizar(request, pk):
         'equipe': list(equipe.items()),
         'minhas_funcoes': minhas_funcoes,
         'pode_ordenar': pode_ordenar(request.user, escala),
-        'editar_musicas': pode_editar_musicas_do_culto(request.user, escala),
+        'editar_musicas': editar_musicas,
     })
 
 

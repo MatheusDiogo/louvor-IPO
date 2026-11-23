@@ -73,16 +73,27 @@
     {% endif %}
     <div class="row g-3 g-md-4">
         {% for item in itens %}
-        <div class="col-sm-6 col-lg-4">
+        <div class="col-sm-6 col-lg-4" id="musica-{{ item.pk }}">
             <div class="table-card p-3 p-md-4 h-100 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                     <div class="text-break-word" style="min-width: 0;">
                         <span class="text-muted small">#{{ forloop.counter }}</span>
                         <h5 class="fw-bold mb-0 mt-1">{{ item.musica.nome }}</h5>
+                        {% if editar_musicas and item.musica.tom and item.tom != item.musica.tom %}<span class="small text-muted">Original em {{ item.musica.tom }}</span>{% endif %}
                     </div>
+                    {% if editar_musicas %}
+                    <form method="post" action="{% url 'escala_musica_tom' item.pk %}" class="m-0 flex-shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="voltar" value="culto">
+                        <select name="tom" class="form-select form-select-sm seletor-tom" onchange="this.form.submit()" aria-label="Tom de {{ item.musica.nome }} neste culto" title="Trocar o tom neste culto">
+                            {% for opcao in item.opcoes_tom %}<option value="{{ opcao }}" {% if opcao == item.tom %}selected{% endif %}>{{ opcao }}</option>{% endfor %}
+                        </select>
+                    </form>
+                    {% else %}
                     <span class="badge rounded-pill bg-light text-success border border-success-subtle px-3 py-2 flex-shrink-0 fs-6">
                         {{ item.tom|default:"—" }}
                     </span>
+                    {% endif %}
                 </div>
 
                 <div class="mt-auto d-flex gap-2">
