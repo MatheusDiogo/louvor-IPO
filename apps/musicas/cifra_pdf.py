@@ -13,7 +13,7 @@ PRETO = (0.1, 0.12, 0.1)
 
 TAM_TITULO, TAM_INFO, TAM_ACORDE, TAM_LETRA, TAM_COMENTARIO = 17, 10, 10, 11.5, 10
 
-TROCAS = {'—': '-', '–': '-', '“': '"', '”': '"', '‘': "'", '’': "'", '…': '...', '•': '-', ' ': ' '}
+TROCAS = {'→': '->', '—': '-', '–': '-', '“': '"', '”': '"', '‘': "'", '’': "'", '…': '...', '•': '-', ' ': ' '}
 
 
 def _limpar(texto):
@@ -142,7 +142,43 @@ def _escrever_linha(esc, partes, transpor, recuo, italico):
     descarregar()
 
 
-def _escrever_musica(esc, nome, cifra_texto, tom_original, tom_destino, subtitulo='', colunas=1):
+def _quebrar(texto, fonte, tamanho, largura):
+    """Quebra o texto em linhas que cabem na largura (respeitando as quebras que a pessoa digitou)."""
+    linhas = []
+    for paragrafo in texto.splitlines() or ['']:
+        atual = ''
+        for palavra in paragrafo.split():
+            tentativa = f'{atual} {palavra}'.strip()
+            if atual and _largura(tentativa, fonte, tamanho) > largura:
+                linhas.append(atual)
+                atual = palavra
+            else:
+                atual = tentativa
+        linhas.append(atual)
+    return linhas
+
+
+def _escrever_anotacoes(esc, anotacoes):
+    """Caixa amarela com as anotações do culto (começo, arranjo, final), abaixo do título."""
+    tamanho, entre = TAM_COMENTARIO, TAM_COMENTARIO + 3
+    largura_rotulo = max(_largura(rotulo.upper(), 'hebo', tamanho - 1) for rotulo, _ in anotacoes) + 10
+    largura_texto = LARGURA - 2 * MARGEM - 20 - largura_rotulo
+    blocos = [(rotulo, _quebrar(texto, 'helv', tamanho, largura_texto)) for rotulo, texto in anotacoes]
+    altura = sum(len(linhas) for _, linhas in blocos) * entre + (len(blocos) - 1) * 3 + 12
+    esc.garantir(altura + 8)
+    caixa = fitz.Rect(MARGEM, esc.y, LARGURA - MARGEM, esc.y + altura)
+    esc.pagina.draw_rect(caixa, color=(0.99, 0.90, 0.54), fill=(1, 0.98, 0.92), width=0.8)
+    y = esc.y + 6
+    for rotulo, linhas in blocos:
+        esc.texto(MARGEM + 10, y + tamanho, rotulo.upper(), 'hebo', tamanho - 1, (0.57, 0.25, 0.05))
+        for linha in linhas:
+            esc.texto(MARGEM + 10 + largura_rotulo, y + tamanho, linha, 'helv', tamanho, PRETO)
+            y += entre
+        y += 3
+    esc.y += altura + 12
+
+
+def _escrever_musica(esc, nome, cifra_texto, tom_original, tom_destino, subtitulo='', colunas=1, anotacoes=None):
     cifra = ler_chordpro(cifra_texto)
     tom_original = tom_original or cifra.tom
     tom_final = tom_destino or tom_original
@@ -161,6 +197,8 @@ def _escrever_musica(esc, nome, cifra_texto, tom_original, tom_destino, subtitul
     if info:
         esc.texto(MARGEM, esc.y + TAM_INFO, info.replace('·', '-'), 'hebo', TAM_INFO, CINZA)
         esc.y += TAM_INFO + 10
+    if anotacoes:
+        _escrever_anotacoes(esc, anotacoes)
     esc.iniciar_colunas(colunas)
 
     secoes = []
@@ -202,14 +240,15 @@ def _paginas_em_uma_coluna(item):
         esc = _Escritor(rascunho)
         esc.nova_pagina()
         _escrever_musica(esc, item['nome'], item.get('cifra', ''), item.get('tom_original', ''),
-                         item.get('tom', ''), item.get('subtitulo', ''))
+                         item.get('tom', ''), item.get('subtitulo', ''), anotacoes=item.get('anotacoes'))
         return len(rascunho)
     finally:
         rascunho.close()
 
 
 def gerar_pdf(musicas, titulo_documento=''):
-    """`musicas`: lista de dicts {nome, cifra, tom_original, tom, subtitulo}. Cada música começa numa página.
+    """`musicas`: lista de dicts {nome, cifra, tom_original, tom, subtitulo, anotacoes}. Cada música começa numa
+    página. `anotacoes` (opcional): [(rótulo, texto), ...] do culto, numa caixa abaixo do título.
 
     A música que não cabe numa página sai em duas colunas.
     """
@@ -219,7 +258,8 @@ def gerar_pdf(musicas, titulo_documento=''):
         colunas = 2 if _paginas_em_uma_coluna(item) > 1 else 1
         esc.nova_pagina()
         _escrever_musica(esc, item['nome'], item.get('cifra', ''), item.get('tom_original', ''),
-                         item.get('tom', ''), item.get('subtitulo', ''), colunas=colunas)
+                         item.get('tom', ''), item.get('subtitulo', ''), colunas=colunas,
+                         anotacoes=item.get('anotacoes'))
     if not musicas:
         esc.iniciar_colunas(1)
         esc.nova_pagina()

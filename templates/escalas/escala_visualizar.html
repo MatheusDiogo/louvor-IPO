@@ -96,6 +96,11 @@
                     {% endif %}
                 </div>
 
+                {% with notas=item.anotacoes %}{% if notas %}
+                <dl class="anotacoes-lista anotacoes-cartao mb-3">
+                    {% for rotulo, texto in notas %}<dt>{{ rotulo }}</dt><dd>{{ texto|linebreaksbr }}</dd>{% endfor %}
+                </dl>
+                {% endif %}{% endwith %}
                 <div class="mt-auto d-flex gap-2">
                     <a href="{% url 'escala_cifras' escala.pk %}#musica-{{ item.pk }}"
                        class="btn btn-success rounded-pill flex-grow-1">

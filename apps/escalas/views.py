@@ -276,6 +276,21 @@ def escala_musica_tom(request, item_pk):
 
 @login_required
 @require_POST
+def escala_musica_anotacoes(request, item_pk):
+    """Anotações da música só neste culto: começo, arranjo e final (líder ou responsável musical)."""
+    item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
+    if not pode_editar_musicas_do_culto(request.user, item.escala):
+        return _sem_permissao(request, item.escala_id)
+    item.anotacao_comeco = request.POST.get('comeco', '').strip()[:500]
+    item.anotacao_arranjo = request.POST.get('arranjo', '').strip()[:1000]
+    item.anotacao_final = request.POST.get('final', '').strip()[:500]
+    item.save(update_fields=['anotacao_comeco', 'anotacao_arranjo', 'anotacao_final'])
+    messages.success(request, f'Anotações de "{item.musica.nome}" salvas.')
+    return redirect(f"{reverse('escala_cifras', args=[item.escala_id])}#musica-{item.pk}")
+
+
+@login_required
+@require_POST
 def escala_musica_excluir(request, item_pk):
     """Remove uma música do culto."""
     item = get_object_or_404(EscalaMusica.objects.select_related('musica', 'escala'), pk=item_pk)
@@ -363,6 +378,7 @@ def escala_cifras(request, pk):
     minha = escala.integrantes.filter(usuario=request.user).select_related('instrumento').first()
     return render(request, 'escalas/escala_cifras.html', {
         'escala': escala, 'itens': itens,
+        'pode_anotar': pode_editar_musicas_do_culto(request.user, escala),
         'desenho_escala': minha.instrumento.desenho if minha else '',
         'desenho_padrao': desenho_do_cadastro(request.user),
     })
@@ -381,6 +397,7 @@ def escala_pdf(request, pk):
             'tom_original': item.musica.tom,
             'tom': item.tom,
             'subtitulo': titulo,
+            'anotacoes': item.anotacoes(),
         }
         for indice, item in enumerate(itens, start=1)
     ], titulo_documento=titulo)

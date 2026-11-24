@@ -50,6 +50,18 @@ class EscalaMusica(models.Model):
     # Posição da música no culto (o ministrante e os líderes podem reordenar)
     ordem = models.PositiveIntegerField(default=0)
 
+    # Anotações só deste culto (o arranjo muda de um culto para outro; a cifra continua a mesma).
+    # Escritas pelo líder ou pelo responsável musical na tela "Todas as cifras".
+    anotacao_comeco = models.TextField(blank=True, default='')
+    anotacao_arranjo = models.TextField(blank=True, default='')
+    anotacao_final = models.TextField(blank=True, default='')
+
+    def anotacoes(self):
+        """[(rótulo, texto), ...] só com o que foi preenchido."""
+        return [(rotulo, texto) for rotulo, texto in (('Começo', self.anotacao_comeco),
+                                                       ('Arranjo', self.anotacao_arranjo),
+                                                       ('Final', self.anotacao_final)) if texto.strip()]
+
     class Meta:
         unique_together = ('escala', 'musica')
         ordering = ['ordem', 'id']

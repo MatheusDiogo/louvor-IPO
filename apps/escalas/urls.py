@@ -21,6 +21,7 @@ urlpatterns = [
     path('<int:pk>/musica/adicionar/', views.escala_musica_adicionar, name='escala_musica_adicionar'),
     path('musica/<int:item_pk>/excluir/', views.escala_musica_excluir, name='escala_musica_excluir'),
     path('musica/<int:item_pk>/tom/', views.escala_musica_tom, name='escala_musica_tom'),
+    path('musica/<int:item_pk>/anotacoes/', views.escala_musica_anotacoes, name='escala_musica_anotacoes'),
     path('<int:pk>/musicas/ordem/', views.escala_musicas_ordem, name='escala_musicas_ordem'),
 
     # Cifras do culto (todas no tom escolhido) e PDF do repertório

@@ -38,6 +38,14 @@
                 <h4 class="fw-bold mb-0" style="color: var(--primary-green);">{{ item.musica.nome }}</h4>
             </div>
             <span class="badge rounded-pill bg-success px-3 py-2 fs-6 flex-shrink-0" title="Tom">{{ item.tom|default:"—" }}</span>
+            {% if pode_anotar %}
+            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill flex-shrink-0 botao-anotar"
+                    data-url="{% url 'escala_musica_anotacoes' item.pk %}" data-nome="{{ item.musica.nome }}"
+                    data-comeco="{{ item.anotacao_comeco }}" data-arranjo="{{ item.anotacao_arranjo }}" data-final="{{ item.anotacao_final }}"
+                    title="Anotações deste culto" aria-label="Anotações de {{ item.musica.nome }} neste culto">
+                <i class="bi bi-chat-square-text"></i>
+            </button>
+            {% endif %}
             {% if item.musica.cifra %}
             <button type="button" class="btn btn-sm btn-outline-success rounded-pill flex-shrink-0 botao-foco" data-cifra="foco"
                     title="Tela cheia" aria-label="Ver {{ item.musica.nome }} em tela cheia">
@@ -45,6 +53,14 @@
             </button>
             {% endif %}
         </div>
+        {% with notas=item.anotacoes %}{% if notas %}
+        <details class="anotacoes-bloco" open>
+            <summary class="anotacoes-alternar"><i class="bi bi-chat-square-text me-1"></i>Anotações deste culto <i class="bi bi-chevron-up anotacoes-seta"></i></summary>
+            <dl class="anotacoes-lista">
+                {% for rotulo, texto in notas %}<dt>{{ rotulo }}</dt><dd>{{ texto|linebreaksbr }}</dd>{% endfor %}
+            </dl>
+        </details>
+        {% endif %}{% endwith %}
         {% if item.musica.cifra %}
         <div class="cifra-leitor">{% include "partials/faixa_acordes.html" with diagramas=item.diagramas id=item.pk %}{{ item.cifra_html|safe }}</div>
         {% else %}
@@ -59,9 +75,80 @@
     </div>
     {% endif %}
 </div>
+
+{% if pode_anotar and itens %}
+<!-- Modal: anotações da música neste culto (líder e responsável musical) -->
+<div class="modal fade" id="modalAnotacoes" tabindex="-1" aria-labelledby="tituloAnotacoes">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form method="post" id="formAnotacoes">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0" id="tituloAnotacoes" style="color: var(--primary-green);"><i class="bi bi-chat-square-text me-2"></i>Anotações</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pt-0">
+                    <p class="small text-muted mb-3">Valem só para este culto: a cifra da música não muda. Deixe em branco o que não precisar.</p>
+                    <label class="form-label small fw-bold text-secondary" for="anotComeco">Começo</label>
+                    <textarea class="form-control mb-3" id="anotComeco" name="comeco" rows="2" maxlength="500" placeholder="Ex.: só guitarra, 4 batidas na bateria"></textarea>
+                    <label class="form-label small fw-bold text-secondary" for="anotArranjo">Arranjo</label>
+                    <div class="d-flex flex-wrap gap-1 mb-2" id="atalhosArranjo" aria-label="Inserir no arranjo">
+                    </div>
+                    <textarea class="form-control mb-3" id="anotArranjo" name="arranjo" rows="3" maxlength="1000" placeholder="Ex.: Estrofe 1 → Refrão → Estrofe 2 → Refrão 2x → Ponte → Refrão 3x"></textarea>
+                    <label class="form-label small fw-bold text-secondary" for="anotFinal">Final</label>
+                    <textarea class="form-control" id="anotFinal" name="final" rows="2" maxlength="500" placeholder="Ex.: termina só no teclado, desacelerando"></textarea>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-login btn-acao">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if pode_anotar and itens %}
+<script>
+(() => {
+    const form = document.getElementById('formAnotacoes');
+    const campos = { comeco: 'anotComeco', arranjo: 'anotArranjo', final: 'anotFinal' };
+    document.querySelectorAll('.botao-anotar').forEach(botao => botao.addEventListener('click', () => {
+        form.action = botao.dataset.url;
+        document.getElementById('tituloAnotacoes').lastChild.textContent = botao.dataset.nome;
+        Object.entries(campos).forEach(([chave, id]) => { document.getElementById(id).value = botao.dataset[chave] || ''; });
+        abrirModal('modalAnotacoes');
+    }));
+
+    // Botões rápidos do arranjo: inserem o trecho onde está o cursor
+    const arranjo = document.getElementById('anotArranjo');
+    const atalhos = ['Estrofe 1', 'Estrofe 2', 'Estrofe 3', 'Refrão', 'Ponte', 'Instrumental', '2x', '3x', '→'];
+    const caixa = document.getElementById('atalhosArranjo');
+    atalhos.forEach(rotulo => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-sm btn-outline-success rounded-pill py-0 px-2';
+        b.textContent = rotulo;
+        b.addEventListener('click', () => {
+            const ini = arranjo.selectionStart ?? arranjo.value.length, fim = arranjo.selectionEnd ?? ini;
+            const antes = arranjo.value.slice(0, ini), depois = arranjo.value.slice(fim);
+            // "Estrofe 1" depois de outra parte já entra com a seta: "Refrão → Estrofe 1"
+            const base = antes.trimEnd();
+            const parte = !['2x', '3x', '→'].includes(rotulo);
+            let trecho = rotulo;
+            if (parte && base && !base.endsWith('→') && !base.endsWith('\n')) trecho = '→ ' + trecho;
+            const inicio = base ? base + (antes.endsWith('\n') ? '\n' : ' ') : '';
+            arranjo.value = inicio + trecho + (depois && !/^\s/.test(depois) ? ' ' : '') + depois;
+            const pos = (inicio + trecho).length;
+            arranjo.focus(); arranjo.setSelectionRange(pos, pos);
+        });
+        caixa.append(b);
+    });
+})();
+</script>
+{% endif %}
 <script src="{% static 'js/cifra.js' %}"></script>
 <script src="{% static 'js/acordes.js' %}"></script>
 {% endblock %}
